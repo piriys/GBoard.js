@@ -116,9 +116,10 @@ class UtilHelpers {
     }
     static squareCoordinatesToColumnRowIndex(coordinates) {
         const array = coordinates.split('|');
-        const colIndex = array[0].charCodeAt(0) - 65;
+        const columnIndex = array[0].charCodeAt(0) - 65;
         const rowIndex = array[1] - 1;
-        return { colIndex: colIndex, rowIndex: rowIndex };
+        console.log(`${coordinates} => ${columnIndex} ${rowIndex}`);
+        return { columnIndex: columnIndex, rowIndex: rowIndex };
     }
     static randomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -588,60 +589,62 @@ class Scrabble extends React.Component {
                         const secondPlacedSquareCoordinates = placedSquareCoordinates[0];
                         const secondPlacedSquare = this.state.squares.get(secondPlacedSquareCoordinates);
 
-                        // Same row, allow only horizontal
                         if (secondPlacedSquare.rowIndex === firstPlacedSquare.rowIndex) {
-                            placingDirection = 'row';
+                            placingDirection = 'horizontal';
                         } else if (secondPlacedSquare.columnIndex === firstPlacedSquare.columnIndex) {
-                            placingDirection = 'column';
+                            placingDirection = 'vertical';
                         }
                     }
 
                     placedSquareCoordinates.forEach((coordinates) => {
                         const squareColumnRow = UtilHelpers.squareCoordinatesToColumnRowIndex(coordinates);
 
+                        // Up
+                        const upSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                            squareColumnRow.columnIndex, squareColumnRow.rowIndex - 1);
+                        console.log(`checking ${upSquareCoordinates}`);
+                        if (this.state.squares.has(upSquareCoordinates) &&
+                            this.state.placedTileIds.indexOf(upSquareCoordinates) === -1 &&
+                            this.state.playedTileIds.indexOf(upSquareCoordinates) === -1 &&
+                            (placingDirection === undefined || placingDirection === 'horizontal')) {
+                            console.log('square above is available');
+                            playableSquareCoordinates.add(upSquareCoordinates);
+                        }
+                        // Down
+                        const downSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                            squareColumnRow.columnIndex, squareColumnRow.rowIndex + 1);
+                        console.log(`checking ${downSquareCoordinates}`)
+                        if (this.state.squares.has(downSquareCoordinates) &&
+                            this.state.placedTileIds.indexOf(downSquareCoordinates) === -1 &&
+                            this.state.playedTileIds.indexOf(downSquareCoordinates) === -1 &&
+                            (placingDirection === undefined || placingDirection === 'horizontal')) {
+                            console.log('square below is available');
+                            playableSquareCoordinates.add(downSquareCoordinates);
+                        }
+                        // Left
+                        const leftSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                            squareColumnRow.columnIndex - 1, squareColumnRow.rowIndex);
+                        console.log(`checking ${leftSquareCoordinates}`)
+                        if (this.state.squares.has(leftSquareCoordinates) &&
+                            this.state.placedTileIds.indexOf(leftSquareCoordinates) === -1 &&
+                            this.state.playedTileIds.indexOf(leftSquareCoordinates) === -1 &&
+                            (placingDirection === undefined || placingDirection === 'vertical')) {
+                            console.log('square left is available');
+                            playableSquareCoordinates.add(leftSquareCoordinates);
+                        }
+                        // Right
+                        const rightSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                            squareColumnRow.columnIndex + 1, squareColumnRow.rowIndex);
+                        console.log(`checking ${rightSquareCoordinates}`)
+                        if (this.state.squares.has(rightSquareCoordinates) &&
+                            this.state.placedTileIds.indexOf(rightSquareCoordinates) === -1 &&
+                            this.state.playedTileIds.indexOf(rightSquareCoordinates) === -1 &&
+                            (placingDirection === undefined || placingDirection === 'vertical')) {
+                            console.log('square right is available');
+                            playableSquareCoordinates.add(rightSquareCoordinates);
+                        }
 
                     });
-
-                    // Up
-                    const upSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
-                        firstPlacedSquare.columnIndex, firstPlacedSquare.rowIndex - 1);
-                    console.log(`checking ${upSquareCoordinates}`);
-                    if (this.state.squares.has(upSquareCoordinates) &&
-                        this.state.placedTileIds.indexOf(upSquareCoordinates) === -1 &&
-                        this.state.playedTileIds.indexOf(upSquareCoordinates) === -1) {
-                        console.log('square above is available');
-                        playableSquareCoordinates.add(upSquareCoordinates);
-                    }
-                    // Down
-                    const downSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
-                        firstPlacedSquare.columnIndex, firstPlacedSquare.rowIndex + 1);
-                    console.log(`checking ${downSquareCoordinates}`)
-                    if (this.state.squares.has(downSquareCoordinates) &&
-                        this.state.placedTileIds.indexOf(downSquareCoordinates) === -1 &&
-                        this.state.playedTileIds.indexOf(downSquareCoordinates) === -1) {
-                        console.log('square below is available');
-                        playableSquareCoordinates.add(downSquareCoordinates);
-                    }
-                    // Left
-                    const leftSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
-                        firstPlacedSquare.columnIndex - 1, firstPlacedSquare.rowIndex);
-                    console.log(`checking ${leftSquareCoordinates}`)
-                    if (this.state.squares.has(leftSquareCoordinates) &&
-                        this.state.placedTileIds.indexOf(leftSquareCoordinates) === -1 &&
-                        this.state.playedTileIds.indexOf(leftSquareCoordinates) === -1) {
-                        console.log('square left is available');
-                        playableSquareCoordinates.add(leftSquareCoordinates);
-                    }
-                    // Right
-                    const rightSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
-                        firstPlacedSquare.columnIndex + 1, firstPlacedSquare.rowIndex);
-                    console.log(`checking ${rightSquareCoordinates}`)
-                    if (this.state.squares.has(rightSquareCoordinates) &&
-                        this.state.placedTileIds.indexOf(rightSquareCoordinates) === -1 &&
-                        this.state.playedTileIds.indexOf(rightSquareCoordinates) === -1) {
-                        console.log('square right is available');
-                        playableSquareCoordinates.add(rightSquareCoordinates);
-                    }
 
                     console.log(playableSquareCoordinates);
                 }
