@@ -190,7 +190,7 @@ class Square {
         this.row = row;
         this.column = column;
         this.squareType = type;
-        this.letter = undefined;
+        this.tileId = undefined; // Tile that this square has on
     }
 }
 
@@ -216,25 +216,20 @@ class Player {
 class SquareDisplay extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {
-            letter: undefined
-        }
     }
 
     render() {
         return (
             <div className={`scrabble__square scrabble__square--${this.props.squareType}`}
-                onClick={(this.state.letter === undefined && this.props.currentGamePhase === 'play') ?
+                onClick={(this.props.letter === undefined && this.props.currentGamePhase === 'place') ?
                     () => {
-                        this.setState({ letter: 'X' }, () => {
-                            this.props.squareDisplayCallback(this.state.letter);
-                        });
+                        this.props.squareDisplayCallback(this.props.coordinates);
                     } : () => {
                         console.log('current game phase is not play or a tile is already placed on this square');
                         console.log(this.props.currentGamePhase);
                     }}>
                 <p>{this.props.coordinates}</p>
-                <p>{this.state.letter}</p>
+                <p>{this.props.letter}</p>
             </div>
         );
     }
@@ -251,18 +246,22 @@ class GameBoard extends React.Component {
         for (let i = 0; i < this.props.squareOrder.length; i++) {
             const coordinates = this.props.squareOrder[i];
             const square = this.props.squares.get(coordinates);
+            let letter = undefined;
+
+            if (this.props.placedLetters.has(coordinates)) {
+                letter = this.props.placedLetters.get(coordinates);
+            }
 
             squareDisplays.push(
                 <SquareDisplay currentGamePhase={this.props.currentGamePhase}
                     squareType={square.squareType}
-                    letter={square.letter}
+                    letter={letter}
                     key={coordinates}
                     coordinates={coordinates} // Remove this if unused
-                    squareDisplayCallback={(letter) => {
-                        // Modify corresponding square object then callback to Scrabble
-                        const square = this.props.squares[coordinates];
-                        square.letter = letter;
-                        this.props.gameBoardCallback(square, 'placeTile');
+                    squareDisplayCallback={(coordinates) => {
+                        console.log('callback from squareDisplay');
+                        console.log(this.props.placedLetters);
+                        this.props.gameBoardCallback(coordinates);
                     }} />
             );
         }
@@ -315,23 +314,7 @@ class ScoreBoard extends React.Component {
     }
 }
 
-class TileDisplay extends React.Component {
-    constructor(props) {
-        super(props);
-    }
-
-    render() {
-        return (
-            <div className="scrabble__tile"
-                onClick={() => { }}>
-                <h2>{this.props.tile.letter}</h2>
-                <p>{this.props.tile.point}</p>
-            </div>
-        );
-    }
-}
-
-class CurrentPlayerStats extends React.Component {
+class GameStatsDisplay extends React.Component {
     constructor(props) {
         super(props);
     }
@@ -339,6 +322,7 @@ class CurrentPlayerStats extends React.Component {
         return (
             <div id="playerInput__stats">
                 <p>Current Player: {this.props.currentPlayer.name}</p>
+                <p>Selected Tile Id: {this.props.selectedTileId}</p>
                 <p>Id: {this.props.currentPlayer.playerId}</p>
                 <p>Current Phase: {this.props.currentGamePhase}</p>
                 <p>Turn: {this.props.turn}</p>
@@ -347,7 +331,28 @@ class CurrentPlayerStats extends React.Component {
     }
 }
 
-class CurrentPlayerTiles extends React.Component {
+class TileDisplay extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        return (
+            <div className={`scrabble__tile ${this.props.selected ? 'scrabble__tile--selected' : ''}`}
+                onClick={this.props.currentGamePhase === 'place' ? () => {
+                    console.log(`selected ${this.props.tileId}`);
+                    this.props.TileDisplayCallback(this.props.tileId);
+                } : () => {
+                    console.log('current game phase is not place');
+                }}>
+                <h2>{this.props.letter}</h2>
+                <p>{this.props.point}</p>
+            </div >
+        );
+    }
+}
+
+class CurrentPlayerTilesDisplay extends React.Component {
     constructor(props) {
         super(props);
     }
@@ -355,8 +360,16 @@ class CurrentPlayerTiles extends React.Component {
         const tileDisplays = [];
         for (let tile of this.props.currentPlayerTiles) {
             tileDisplays.push(
-                <TileDisplay key={tile.tileId}
-                    tile={tile} />
+                <TileDisplay currentGamePhase={this.props.currentGamePhase}
+                    key={tile.tileId}
+                    tileId={tile.tileId}
+                    letter={tile.letter}
+                    point={tile.point}
+                    selected={this.props.selectedTileId === tile.tileId}
+                    TileDisplayCallback={(tileId) => {
+                        console.log('updating selectedTileId');
+                        this.props.currentPlayerTilesDisplayCallback(tileId);
+                    }} />
             );
         }
         // TO DO: Implement looking up tileIds
@@ -368,30 +381,30 @@ class CurrentPlayerTiles extends React.Component {
     }
 }
 
-class InputButtons extends React.Component {
+class InputButtonsDisplay extends React.Component {
     constructor(props) {
         super(props);
     }
     render() {
-        let buttonEvents = [];
+        let buttonChoices = [];
 
         if (this.props.currentGamePhase === 'draw') {
-            buttonEvents = ['draw'];
+            buttonChoices = ['draw'];
         } else if (this.props.currentGamePhase === 'play/exchange') {
-            buttonEvents = ['play', 'exchange'];
+            buttonChoices = ['play', 'exchange'];
         } else if (this.props.currentGamePhase === 'place') {
-            buttonEvents = ['place', 'cancel'];
+            buttonChoices = ['place', 'cancel'];
         } else if (this.props.currentGamePhase === 'end') {
-            buttonEvents = ['end'];
+            buttonChoices = ['end'];
         }
 
-        const buttons = buttonEvents.map((event) => {
+        const buttons = buttonChoices.map((choice) => {
             return (
-                <button key={event}
+                <button key={choice}
                     onClick={() => {
-                        this.props.inputButtonsCallback(event);
+                        this.props.inputButtonsCallback(choice);
                     }}>
-                    {event}
+                    {choice}
                 </button>
             );
         });
@@ -423,17 +436,18 @@ class Scrabble extends React.Component {
         this.gamePhases = ['draw', 'play/exchange', 'place', 'end'];
         this.currentGamePhaseIndex = 0;
 
-        playerSetupData.players.forEach((player, playerId, map) => {
-            // player = this.drawTile(player);
-            // // map.set(playerId, player);
-        });
+        // playerSetupData.players.forEach((player, playerId, map) => {
+        //     // player = this.drawTile(player);
+        //     // // map.set(playerId, player);
+        // });
 
         this.state = {
             currentGamePhase: this.gamePhases[this.currentGamePhaseIndex],
             players: playerSetupData.players,
             squares: squareSetupData.squares,
-            playedTileIds: new Map(),
-            placedTileIds: new Map(),
+            playedTileIds: [],
+            placedTileIds: [],
+            selectedTileId: undefined,
             availableSquareCoordinates: new Set(),
             currentPlayerId: this.playerOrder[this.currentPlayerIndex],
             turn: 1
@@ -453,7 +467,7 @@ class Scrabble extends React.Component {
                 this.undrawnTileIds.splice(randomTileIndex, 1);
                 this.drawnTileIds.push(tileId);
             }
-            console.log(`${player.name} drew ${drawCount} tiles. ${this.undrawnTileIds.length} remains.`);
+            console.log(`${player.name} drew ${drawCount} tiles, ${this.undrawnTileIds.length} remains.`);
         }
     }
 
@@ -463,7 +477,7 @@ class Scrabble extends React.Component {
         while (player.tileIds.length > 0) {
             this.undrawnTileIds.push(player.tileIds.pop());
         }
-        console.log(this.undrawnTileIds);
+
         this.drawTile(player);
     }
 
@@ -501,7 +515,7 @@ class Scrabble extends React.Component {
 
             updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex];
             this.setState(updatedStateProperties, () => {
-                console.log(`current game phase is ${this.state.currentGamePhase}`);
+                console.log(`current game phase is ${this.state.currentGamePhase} `);
             });
         } else {
             this.nextGamePhase();
@@ -514,6 +528,7 @@ class Scrabble extends React.Component {
 
             updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex];
             updatedStateProperties.placedTiles = new Map();
+            updatedStateProperties.selectedTileId = undefined;
             // TO DO: put placed tiles back 
 
             this.setState(updatedStateProperties, () => {
@@ -527,71 +542,103 @@ class Scrabble extends React.Component {
     render() {
         const currentPlayer = this.state.players.get(this.state.currentPlayerId);
         const currentPlayerTiles = [];
+
         console.log(currentPlayer);
-        for (let tileId of currentPlayer.tileIds) {
-            console.log(`tile: ${tileId}`);
+        currentPlayer.tileIds.forEach((tileId) => {
             currentPlayerTiles.push(this.tiles.get(tileId));
-        }
+        });
+
+        const placedLetters = new Map();
+        this.state.placedTileIds.forEach((tileId) => {
+            const tile = this.tiles.get(tileId);
+            placedLetters.set(tile.coordinates, tile.letter);
+        });
+        console.log(placedLetters);
 
         return (
             <div id="scrabble">
                 <div id="scrabble__game" className="page">
                     <GameBoard currentGamePhase={this.state.currentGamePhase}
                         squares={this.state.squares}
+                        placedLetters={placedLetters}
                         squareOrder={this.squareOrder}
-                        gameBoardCallback={(square, event) => {
-                            if (event === 'placeTile') {
-                                const squares = this.state.squares;
-                                squares.set(square.coordinates, square);
+                        gameBoardCallback={(coordinates) => {
+                            // Assume placeTile is never called if no tile is selected
+                            console.log(`callback received from GameBoard at ${coordinates}`);
+                            if (this.state.selectedTileId !== undefined) {
+                                const updatedStateProperties = {};
 
-                                this.setState({ squares: squares }, () => {
-                                    console.log('tile placed. current squares is:');
+                                const squares = this.state.squares;
+                                const square = this.state.squares.get(coordinates);
+
+                                square.tileId = this.state.selectedTileId;
+                                squares.set(coordinates, square);
+                                updatedStateProperties.squares = squares;
+
+                                const tiles = this.tiles;
+                                const tile = this.tiles.get(this.state.selectedTileId);
+
+                                tile.coordinates = coordinates;
+                                tiles.set(this.state.selectedTileId, tile);
+                                updatedStateProperties.tiles = tiles;
+
+                                console.log('PlacedTileId is:');
+                                console.log(this.state.placedTileIds);
+
+                                const placedTileIds = this.state.placedTileIds;
+                                placedTileIds.push(this.state.selectedTileId);
+                                updatedStateProperties.placedTilesIds = placedTileIds;
+                                console.log(updatedStateProperties);
+
+                                this.setState(updatedStateProperties, () => {
+                                    console.log('tile placed. current squares are:');
                                     console.log(this.state.squares);
+                                    console.log(this.state.placedTileIds);
                                 });
                             }
                         }} />
-                    <CurrentPlayerStats currentGamePhase={this.state.currentGamePhase}
+                    <GameStatsDisplay currentGamePhase={this.state.currentGamePhase}
+                        selectedTileId={this.state.selectedTileId}
                         currentPlayer={currentPlayer}
                         turn={this.state.turn} />
-                    <InputButtons currentGamePhase={this.state.currentGamePhase}
-                        inputButtonsCallback={(event) => {
+                    <InputButtonsDisplay currentGamePhase={this.state.currentGamePhase}
+                        inputButtonsCallback={(choice) => {
                             // Draw -> Play/exchange -> Place(skip if exchange) -> End
 
                             // Draw phase
-                            if (event === 'draw') {
+                            if (choice === 'draw') {
                                 this.drawTile();
                                 this.nextGamePhase();
 
                                 // Play/exchange phase
-                            } else if (event === 'play') {
+                            } else if (choice === 'play') {
                                 this.nextGamePhase();
-                            } else if (event === 'exchange') {
+                            } else if (choice === 'exchange') {
                                 this.exchangeTile();
                                 this.nextGamePhase({ skipNextPhase: true });
 
                                 // Place phase (skip if player picked exchange)
-                            } else if (event === 'place') {
+                            } else if (choice === 'place') {
                                 this.nextGamePhase();
-                            } else if (event === 'cancel') {
+                            } else if (choice === 'cancel') {
                                 // TO DO: put all placed tiles back to player
                                 this.cancelPlaceGamePhase();
 
                                 // End Phase
-                            } else if (event === 'end') {
+                            } else if (choice === 'end') {
                                 this.nextGamePhase();
                             }
                         }} />
-                    <CurrentPlayerTiles currentPlayerTiles={currentPlayerTiles} />
+                    <CurrentPlayerTilesDisplay currentGamePhase={this.state.currentGamePhase}
+                        selectedTileId={this.state.selectedTileId}
+                        currentPlayerTiles={currentPlayerTiles}
+                        currentPlayerTilesDisplayCallback={(selectedTileId) => {
+                            this.setState({ selectedTileId: selectedTileId });
+                        }} />
                 </div>
                 <ScoreBoard currentGamePhase={this.state.currentGamePhase}
                     players={this.state.players}
-                    playerOrder={this.playerOrder}
-                    scoreBoardCallback={(players) => {
-                        this.setState({ players: players }, () => {
-                            console.log(`ScoreBoard callback, player state of Scrabble is:`);
-                            console.log(this.state.players);
-                        });
-                    }} />
+                    playerOrder={this.playerOrder} />
             </div>
         );
     }
