@@ -31,70 +31,70 @@ const TILE_DATA = {
 
 const PREMIUM_SQUARE_DATA = {
     // Double Letter
-    'D1': { type: 'dl' },
-    'L1': { type: 'dl' },
-    'G3': { type: 'dl' },
-    'I3': { type: 'dl' },
-    'A4': { type: 'dl' },
-    'H4': { type: 'dl' },
-    'O4': { type: 'dl' },
-    'C7': { type: 'dl' },
-    'G7': { type: 'dl' },
-    'I7': { type: 'dl' },
-    'M7': { type: 'dl' },
-    'D8': { type: 'dl' },
-    'L8': { type: 'dl' },
-    'C9': { type: 'dl' },
-    'G9': { type: 'dl' },
-    'I9': { type: 'dl' },
-    'M9': { type: 'dl' },
-    'A12': { type: 'dl' },
-    'H12': { type: 'dl' },
-    'O12': { type: 'dl' },
-    'G13': { type: 'dl' },
-    'I13': { type: 'dl' },
-    'D15': { type: 'dl' },
-    'L15': { type: 'dl' },
+    'D|1': { type: 'dl' },
+    'L|1': { type: 'dl' },
+    'G|3': { type: 'dl' },
+    'I|3': { type: 'dl' },
+    'A|4': { type: 'dl' },
+    'H|4': { type: 'dl' },
+    'O|4': { type: 'dl' },
+    'C|7': { type: 'dl' },
+    'G|7': { type: 'dl' },
+    'I|7': { type: 'dl' },
+    'M|7': { type: 'dl' },
+    'D|8': { type: 'dl' },
+    'L|8': { type: 'dl' },
+    'C|9': { type: 'dl' },
+    'G|9': { type: 'dl' },
+    'I|9': { type: 'dl' },
+    'M|9': { type: 'dl' },
+    'A|12': { type: 'dl' },
+    'H|12': { type: 'dl' },
+    'O|12': { type: 'dl' },
+    'G|13': { type: 'dl' },
+    'I|13': { type: 'dl' },
+    'D|15': { type: 'dl' },
+    'L|15': { type: 'dl' },
     // Triple letter
-    'F2': { type: 'tl' },
-    'J2': { type: 'tl' },
-    'B6': { type: 'tl' },
-    'F6': { type: 'tl' },
-    'J6': { type: 'tl' },
-    'N6': { type: 'tl' },
-    'B10': { type: 'tl' },
-    'F10': { type: 'tl' },
-    'J10': { type: 'tl' },
-    'N10': { type: 'tl' },
-    'F14': { type: 'tl' },
-    'J14': { type: 'tl' },
+    'F|2': { type: 'tl' },
+    'J|2': { type: 'tl' },
+    'B|6': { type: 'tl' },
+    'F|6': { type: 'tl' },
+    'J|6': { type: 'tl' },
+    'N|6': { type: 'tl' },
+    'B|10': { type: 'tl' },
+    'F|10': { type: 'tl' },
+    'J|10': { type: 'tl' },
+    'N|10': { type: 'tl' },
+    'F|14': { type: 'tl' },
+    'J|14': { type: 'tl' },
     // Double word
-    'B2': { type: 'dw' },
-    'N2': { type: 'dw' },
-    'C3': { type: 'dw' },
-    'M3': { type: 'dw' },
-    'D4': { type: 'dw' },
-    'L4': { type: 'dw' },
-    'E5': { type: 'dw' },
-    'K5': { type: 'dw' },
-    'H8': { type: 'dw' },
-    'E11': { type: 'dw' },
-    'K11': { type: 'dw' },
-    'D12': { type: 'dw' },
-    'L12': { type: 'dw' },
-    'C13': { type: 'dw' },
-    'M13': { type: 'dw' },
-    'B14': { type: 'dw' },
-    'N14': { type: 'dw' },
+    'B|2': { type: 'dw' },
+    'N|2': { type: 'dw' },
+    'C|3': { type: 'dw' },
+    'M|3': { type: 'dw' },
+    'D|4': { type: 'dw' },
+    'L|4': { type: 'dw' },
+    'E|5': { type: 'dw' },
+    'K|5': { type: 'dw' },
+    'H|8': { type: 'dw' },
+    'E|11': { type: 'dw' },
+    'K|11': { type: 'dw' },
+    'D|12': { type: 'dw' },
+    'L|12': { type: 'dw' },
+    'C|13': { type: 'dw' },
+    'M|13': { type: 'dw' },
+    'B|14': { type: 'dw' },
+    'N|14': { type: 'dw' },
     // Triple word 
-    'A1': { type: 'tw' },
-    'H1': { type: 'tw' },
-    'O1': { type: 'tw' },
-    'A8': { type: 'tw' },
-    'O8': { type: 'tw' },
-    'A15': { type: 'tw' },
-    'H15': { type: 'tw' },
-    'O15': { type: 'tw' }
+    'A|1': { type: 'tw' },
+    'H|1': { type: 'tw' },
+    'O|1': { type: 'tw' },
+    'A|8': { type: 'tw' },
+    'O|8': { type: 'tw' },
+    'A|15': { type: 'tw' },
+    'H|15': { type: 'tw' },
+    'O|15': { type: 'tw' }
 };
 
 const SETTINGS = {
@@ -104,9 +104,21 @@ const SETTINGS = {
 
 class UtilHelpers {
     static squareIndexToCoordinates(index) {
+        const col = String.fromCharCode(65 + Math.floor(index % 15)); //65 = 'A'       
         const row = Math.floor(index / 15) + 1;
-        const col = String.fromCharCode(65 + Math.floor(index % 15)); //65 = 'A'
-        return `${col}${row}`;
+        return `${col}|${row}`;
+    }
+    static squareColumnRowIndexToCoordinates(colIndex, rowIndex) {
+        const col = String.fromCharCode(65 + colIndex);
+        const row = rowIndex + 1;
+        console.log(`colIndex:${colIndex} rowIndex:${rowIndex}`);
+        return `${col}|${row}`;
+    }
+    static squareCoordinatesToColumnRowIndex(coordinates) {
+        const array = coordinates.split('|');
+        const colIndex = array[0].charCodeAt(0) - 65;
+        const rowIndex = array[1] - 1;
+        return { colIndex: colIndex, rowIndex: rowIndex };
     }
     static randomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -129,14 +141,14 @@ class SetupHelpers {
             const coordinates = UtilHelpers.squareIndexToCoordinates(i);
             const type = PREMIUM_SQUARE_DATA.hasOwnProperty(coordinates) ?
                 PREMIUM_SQUARE_DATA[coordinates].type : 'np';
-            const column = i % 15;
-            const row = Math.floor(i / 15);
-            const newSquare = new Square({ type: type, coordinates: coordinates, row: row, column: column });
+            const columnIndex = i % 15;
+            const rowIndex = Math.floor(i / 15);
+            const newSquare = new Square({ type: type, coordinates: coordinates, columnIndex: columnIndex, rowIndex: rowIndex });
 
             squares.set(coordinates, newSquare);
             squareOrder.push(coordinates);
         }
-
+        console.log(squares);
         return {
             squares: squares,
             squareOrder: squareOrder
@@ -185,10 +197,10 @@ class SetupHelpers {
 
 /* Class containing game data */
 class Square {
-    constructor({ coordinates, row, column, type = 'np' } = {}) {
+    constructor({ coordinates, columnIndex, rowIndex, type = 'np' } = {}) {
         this.coordinates = coordinates;
-        this.row = row;
-        this.column = column;
+        this.columnIndex = columnIndex;
+        this.rowIndex = rowIndex;
         this.squareType = type;
         this.tileId = undefined; // Tile that this square has on
     }
@@ -220,8 +232,8 @@ class SquareDisplay extends React.Component {
 
     render() {
         return (
-            <div className={`scrabble__square scrabble__square--${this.props.squareType}`}
-                onClick={(this.props.letter === undefined && this.props.currentGamePhase === 'place') ?
+            <div className={`scrabble__square scrabble__square--${this.props.squareType} ${this.props.isPlayable ? 'scrabble__square--playable' : ''} ${this.props.isPlaced ? 'scrabble__square--placed' : ''}`}
+                onClick={(this.props.letter === undefined && this.props.currentGamePhase === 'place' && this.props.isPlayable) ?
                     () => {
                         this.props.squareDisplayCallback(this.props.coordinates);
                     } : () => {
@@ -258,6 +270,8 @@ class GameBoard extends React.Component {
                     letter={letter}
                     key={coordinates}
                     coordinates={coordinates} // Remove this if unused
+                    isPlayable={this.props.playableSquareCoordinates.has(coordinates)}
+                    isPlaced={this.props.placedSquareCoordinates.has(coordinates)}
                     squareDisplayCallback={(coordinates) => {
                         console.log('callback from squareDisplay');
                         console.log(this.props.placedLetters);
@@ -448,7 +462,6 @@ class Scrabble extends React.Component {
             playedTileIds: [],
             placedTileIds: [],
             selectedTileId: undefined,
-            availableSquareCoordinates: new Set(),
             currentPlayerId: this.playerOrder[this.currentPlayerIndex],
             turn: 1
         };
@@ -540,6 +553,7 @@ class Scrabble extends React.Component {
     }
 
     render() {
+        // Refract these into functions
         const currentPlayer = this.state.players.get(this.state.currentPlayerId);
         const currentPlayerTiles = [];
 
@@ -548,12 +562,92 @@ class Scrabble extends React.Component {
             currentPlayerTiles.push(this.tiles.get(tileId));
         });
 
-        const placedLetters = new Map();
+        const placedLetters = new Map(); // For GameBoard
+        const placedSquareCoordinates = [];
         this.state.placedTileIds.forEach((tileId) => {
             const tile = this.tiles.get(tileId);
             placedLetters.set(tile.coordinates, tile.letter);
+            placedSquareCoordinates.push(tile.coordinates);
         });
-        console.log(placedLetters);
+
+        const playableSquareCoordinates = new Set();
+        if (this.state.currentGamePhase === 'place') {
+            console.log('checking for playableSquares');
+            if (this.state.playedTileIds.length === 0 && this.state.placedTileIds.length === 0) {
+                console.log('no square is placed yet');
+                playableSquareCoordinates.add('H|8');
+            } else {
+                console.log('at least one square is placed');
+                if (this.state.placedTileIds.length > 0) {
+                    const firstPlacedSquareCoordinates = placedSquareCoordinates[0];
+                    const firstPlacedSquare = this.state.squares.get(firstPlacedSquareCoordinates);
+                    let placingDirection = undefined;
+
+                    // Second placed square will determine the direction
+                    if (this.state.placedTileIds.length > 1) {
+                        const secondPlacedSquareCoordinates = placedSquareCoordinates[0];
+                        const secondPlacedSquare = this.state.squares.get(secondPlacedSquareCoordinates);
+
+                        // Same row, allow only horizontal
+                        if (secondPlacedSquare.rowIndex === firstPlacedSquare.rowIndex) {
+                            placingDirection = 'row';
+                        } else if (secondPlacedSquare.columnIndex === firstPlacedSquare.columnIndex) {
+                            placingDirection = 'column';
+                        }
+                    }
+
+                    placedSquareCoordinates.forEach((coordinates) => {
+                        const squareColumnRow = UtilHelpers.squareCoordinatesToColumnRowIndex(coordinates);
+
+
+                    });
+
+                    // Up
+                    const upSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                        firstPlacedSquare.columnIndex, firstPlacedSquare.rowIndex - 1);
+                    console.log(`checking ${upSquareCoordinates}`);
+                    if (this.state.squares.has(upSquareCoordinates) &&
+                        this.state.placedTileIds.indexOf(upSquareCoordinates) === -1 &&
+                        this.state.playedTileIds.indexOf(upSquareCoordinates) === -1) {
+                        console.log('square above is available');
+                        playableSquareCoordinates.add(upSquareCoordinates);
+                    }
+                    // Down
+                    const downSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                        firstPlacedSquare.columnIndex, firstPlacedSquare.rowIndex + 1);
+                    console.log(`checking ${downSquareCoordinates}`)
+                    if (this.state.squares.has(downSquareCoordinates) &&
+                        this.state.placedTileIds.indexOf(downSquareCoordinates) === -1 &&
+                        this.state.playedTileIds.indexOf(downSquareCoordinates) === -1) {
+                        console.log('square below is available');
+                        playableSquareCoordinates.add(downSquareCoordinates);
+                    }
+                    // Left
+                    const leftSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                        firstPlacedSquare.columnIndex - 1, firstPlacedSquare.rowIndex);
+                    console.log(`checking ${leftSquareCoordinates}`)
+                    if (this.state.squares.has(leftSquareCoordinates) &&
+                        this.state.placedTileIds.indexOf(leftSquareCoordinates) === -1 &&
+                        this.state.playedTileIds.indexOf(leftSquareCoordinates) === -1) {
+                        console.log('square left is available');
+                        playableSquareCoordinates.add(leftSquareCoordinates);
+                    }
+                    // Right
+                    const rightSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
+                        firstPlacedSquare.columnIndex + 1, firstPlacedSquare.rowIndex);
+                    console.log(`checking ${rightSquareCoordinates}`)
+                    if (this.state.squares.has(rightSquareCoordinates) &&
+                        this.state.placedTileIds.indexOf(rightSquareCoordinates) === -1 &&
+                        this.state.playedTileIds.indexOf(rightSquareCoordinates) === -1) {
+                        console.log('square right is available');
+                        playableSquareCoordinates.add(rightSquareCoordinates);
+                    }
+
+                    console.log(playableSquareCoordinates);
+                }
+            }
+        }
+
 
         return (
             <div id="scrabble">
@@ -562,6 +656,8 @@ class Scrabble extends React.Component {
                         squares={this.state.squares}
                         placedLetters={placedLetters}
                         squareOrder={this.squareOrder}
+                        playableSquareCoordinates={playableSquareCoordinates}
+                        placedSquareCoordinates={new Set(placedSquareCoordinates)}
                         gameBoardCallback={(coordinates) => {
                             // Assume placeTile is never called if no tile is selected
                             console.log(`callback received from GameBoard at ${coordinates}`);
@@ -588,7 +684,8 @@ class Scrabble extends React.Component {
                                 const placedTileIds = this.state.placedTileIds;
                                 placedTileIds.push(this.state.selectedTileId);
                                 updatedStateProperties.placedTilesIds = placedTileIds;
-                                console.log(updatedStateProperties);
+
+                                updatedStateProperties.selectedTileId = undefined;
 
                                 this.setState(updatedStateProperties, () => {
                                     console.log('tile placed. current squares are:');

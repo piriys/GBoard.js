@@ -6,6 +6,11 @@
   --double-word-color: salmon;
   --triple-word-color: red;
   --selected-tile-color: yellow;
+
+  --playable-square-border-color: purple;
+  --played-square-border-color: yellowgreen;
+  --placed-square-border-color: green;
+
   --breakoff-width: 600px;
 }
 * {
@@ -59,6 +64,17 @@
   background-color: var(--square--color);
   font-size: 2vmin;
 }
+
+.scrabble__square--playable {
+  border: 5px solid var(--playable-square-border-color);
+}
+.scrabble__square--placed {
+  border: 5px dashed var(--placed-square-border-color);
+}
+.scrabble__square--played {
+  border: 5px solid var(--played-square-border-color);
+}
+
 /* Double Letter */
 .scrabble__square--dl {
   background-color: var(--double-letter-color);
