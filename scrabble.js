@@ -104,17 +104,18 @@ const SETTINGS = {
 
 class UtilHelpers {
     static squareIndexToCoordinates(index) {
-        const col = String.fromCharCode(65 + Math.floor(index % 15)); //65 = 'A'       
+        const column = String.fromCharCode(65 + Math.floor(index % 15)); //65 = 'A'       
         const row = Math.floor(index / 15) + 1;
-        return `${col}|${row}`;
+        return `${column}|${row}`;
     }
-    static squareColumnRowIndexToCoordinates(colIndex, rowIndex) {
-        const col = String.fromCharCode(65 + colIndex);
+    static squareColumnRowIndexToCoordinates(columnIndex, rowIndex) {
+        const column = String.fromCharCode(65 + columnIndex);
         const row = rowIndex + 1;
-        console.log(`colIndex:${colIndex} rowIndex:${rowIndex}`);
-        return `${col}|${row}`;
+        console.log(`columnIndex:${columnIndex} rowIndex:${rowIndex}`);
+        return `${column}|${row}`;
     }
     static squareCoordinatesToColumnRowIndex(coordinates) {
+        console.log(coordinates);
         const array = coordinates.split('|');
         const columnIndex = array[0].charCodeAt(0) - 65;
         const rowIndex = array[1] - 1;
@@ -373,19 +374,22 @@ class CurrentPlayerTilesDisplay extends React.Component {
     }
     render() {
         const tileDisplays = [];
+        console.log(this.props.placedTileIds);
         for (let tile of this.props.currentPlayerTiles) {
-            tileDisplays.push(
-                <TileDisplay currentGamePhase={this.props.currentGamePhase}
-                    key={tile.tileId}
-                    tileId={tile.tileId}
-                    letter={tile.letter}
-                    point={tile.point}
-                    selected={this.props.selectedTileId === tile.tileId}
-                    TileDisplayCallback={(tileId) => {
-                        console.log('updating selectedTileId');
-                        this.props.currentPlayerTilesDisplayCallback(tileId);
-                    }} />
-            );
+            if (!this.props.placedTileIds.has(tile.tileId)) {
+                tileDisplays.push(
+                    <TileDisplay currentGamePhase={this.props.currentGamePhase}
+                        key={tile.tileId}
+                        tileId={tile.tileId}
+                        letter={tile.letter}
+                        point={tile.point}
+                        selected={this.props.selectedTileId === tile.tileId}
+                        TileDisplayCallback={(tileId) => {
+                            console.log('updating selectedTileId');
+                            this.props.currentPlayerTilesDisplayCallback(tileId);
+                        }} />
+                );
+            }
         }
         // TO DO: Implement looking up tileIds
         return (
@@ -540,8 +544,16 @@ class Scrabble extends React.Component {
             this.currentGamePhaseIndex--;
             const updatedStateProperties = {};
 
+            const currentPlayer = this.state.players.get(this.state.currentPlayerId);
+
+            console.log('putting placed tiles back to current player');
+            this.state.placedTileIds.forEach((tileIds) => {
+                currentPlayer.tileIds.push(tileIds);
+                this.tiles.get(tileIds).coordinates = undefined;
+            });
+
             updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex];
-            updatedStateProperties.placedTiles = new Map();
+            updatedStateProperties.placedTiles = [];
             updatedStateProperties.selectedTileId = undefined;
             // TO DO: put placed tiles back 
 
@@ -571,12 +583,12 @@ class Scrabble extends React.Component {
             placedSquareCoordinates.push(tile.coordinates);
         });
 
-        const playableSquareCoordinates = new Set();
+        const playableSquareCoordinates = [];
         if (this.state.currentGamePhase === 'place') {
             console.log('checking for playableSquares');
             if (this.state.playedTileIds.length === 0 && this.state.placedTileIds.length === 0) {
                 console.log('no square is placed yet');
-                playableSquareCoordinates.add('H|8');
+                playableSquareCoordinates.push('H|8');
             } else {
                 console.log('at least one square is placed');
                 if (this.state.placedTileIds.length > 0) {
@@ -586,15 +598,17 @@ class Scrabble extends React.Component {
 
                     // Second placed square will determine the direction
                     if (this.state.placedTileIds.length > 1) {
-                        const secondPlacedSquareCoordinates = placedSquareCoordinates[0];
+                        const secondPlacedSquareCoordinates = placedSquareCoordinates[1];
                         const secondPlacedSquare = this.state.squares.get(secondPlacedSquareCoordinates);
 
                         if (secondPlacedSquare.rowIndex === firstPlacedSquare.rowIndex) {
-                            placingDirection = 'horizontal';
-                        } else if (secondPlacedSquare.columnIndex === firstPlacedSquare.columnIndex) {
                             placingDirection = 'vertical';
+                        } else if (secondPlacedSquare.columnIndex === firstPlacedSquare.columnIndex) {
+                            placingDirection = 'horizontal';
                         }
                     }
+
+                    console.log(`placingDirection: ${placingDirection}`);
 
                     placedSquareCoordinates.forEach((coordinates) => {
                         const squareColumnRow = UtilHelpers.squareCoordinatesToColumnRowIndex(coordinates);
@@ -607,8 +621,8 @@ class Scrabble extends React.Component {
                             this.state.placedTileIds.indexOf(upSquareCoordinates) === -1 &&
                             this.state.playedTileIds.indexOf(upSquareCoordinates) === -1 &&
                             (placingDirection === undefined || placingDirection === 'horizontal')) {
-                            console.log('square above is available');
-                            playableSquareCoordinates.add(upSquareCoordinates);
+                            console.log(`square up (${upSquareCoordinates}) is available`);
+                            playableSquareCoordinates.push(upSquareCoordinates);
                         }
                         // Down
                         const downSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
@@ -618,8 +632,8 @@ class Scrabble extends React.Component {
                             this.state.placedTileIds.indexOf(downSquareCoordinates) === -1 &&
                             this.state.playedTileIds.indexOf(downSquareCoordinates) === -1 &&
                             (placingDirection === undefined || placingDirection === 'horizontal')) {
-                            console.log('square below is available');
-                            playableSquareCoordinates.add(downSquareCoordinates);
+                            console.log(`square down (${downSquareCoordinates}) is available`);
+                            playableSquareCoordinates.push(downSquareCoordinates);
                         }
                         // Left
                         const leftSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
@@ -629,8 +643,8 @@ class Scrabble extends React.Component {
                             this.state.placedTileIds.indexOf(leftSquareCoordinates) === -1 &&
                             this.state.playedTileIds.indexOf(leftSquareCoordinates) === -1 &&
                             (placingDirection === undefined || placingDirection === 'vertical')) {
-                            console.log('square left is available');
-                            playableSquareCoordinates.add(leftSquareCoordinates);
+                            console.log(`square left (${leftSquareCoordinates}) is available`);
+                            playableSquareCoordinates.push(leftSquareCoordinates);
                         }
                         // Right
                         const rightSquareCoordinates = UtilHelpers.squareColumnRowIndexToCoordinates(
@@ -640,10 +654,9 @@ class Scrabble extends React.Component {
                             this.state.placedTileIds.indexOf(rightSquareCoordinates) === -1 &&
                             this.state.playedTileIds.indexOf(rightSquareCoordinates) === -1 &&
                             (placingDirection === undefined || placingDirection === 'vertical')) {
-                            console.log('square right is available');
-                            playableSquareCoordinates.add(rightSquareCoordinates);
+                            console.log(`square right (${rightSquareCoordinates}) is available`);
+                            playableSquareCoordinates.push(rightSquareCoordinates);
                         }
-
                     });
 
                     console.log(playableSquareCoordinates);
@@ -659,7 +672,7 @@ class Scrabble extends React.Component {
                         squares={this.state.squares}
                         placedLetters={placedLetters}
                         squareOrder={this.squareOrder}
-                        playableSquareCoordinates={playableSquareCoordinates}
+                        playableSquareCoordinates={new Set(playableSquareCoordinates)}
                         placedSquareCoordinates={new Set(placedSquareCoordinates)}
                         gameBoardCallback={(coordinates) => {
                             // Assume placeTile is never called if no tile is selected
@@ -686,7 +699,7 @@ class Scrabble extends React.Component {
 
                                 const placedTileIds = this.state.placedTileIds;
                                 placedTileIds.push(this.state.selectedTileId);
-                                updatedStateProperties.placedTilesIds = placedTileIds;
+                                updatedStateProperties.placedTileIds = placedTileIds;
 
                                 updatedStateProperties.selectedTileId = undefined;
 
@@ -719,6 +732,7 @@ class Scrabble extends React.Component {
 
                                 // Place phase (skip if player picked exchange)
                             } else if (choice === 'place') {
+
                                 this.nextGamePhase();
                             } else if (choice === 'cancel') {
                                 // TO DO: put all placed tiles back to player
@@ -731,6 +745,7 @@ class Scrabble extends React.Component {
                         }} />
                     <CurrentPlayerTilesDisplay currentGamePhase={this.state.currentGamePhase}
                         selectedTileId={this.state.selectedTileId}
+                        placedTileIds={new Set(this.state.placedTileIds)}
                         currentPlayerTiles={currentPlayerTiles}
                         currentPlayerTilesDisplayCallback={(selectedTileId) => {
                             this.setState({ selectedTileId: selectedTileId });
