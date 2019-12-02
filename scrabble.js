@@ -1,4 +1,11 @@
 console.clear();
+const SETTINGS = {
+    playerCount: 2,
+    startingTileCount: 7,
+    boardLength: 15,
+    dictionaryUrl: './sowpods.txt'
+};
+
 const TILE_DATA = {
     'B': { point: 3, count: 2 },
     'A': { point: 1, count: 9 },
@@ -97,15 +104,10 @@ const PREMIUM_SQUARE_DATA = {
     'O|15': { type: 'tw' }
 };
 
-const SETTINGS = {
-    playerCount: 2,
-    startingTileCount: 7
-};
-
-class UtilHelpers {
+class GridHelpers {
     static squareIndexToCoordinates(index) {
-        const column = String.fromCharCode(65 + Math.floor(index % 15)); //65 = 'A'       
-        const row = Math.floor(index / 15) + 1;
+        const column = String.fromCharCode(65 + Math.floor(index % SETTINGS.boardLength)); //65 = 'A'       
+        const row = Math.floor(index / SETTINGS.boardLength) + 1;
         return `${column}|${row}`;
     }
     static squareColumnRowIndexToCoordinates(columnIndex, rowIndex) {
@@ -119,29 +121,70 @@ class UtilHelpers {
         const rowIndex = array[1] - 1;
         return { columnIndex: columnIndex, rowIndex: rowIndex };
     }
-    static getAdjacentCoordinates(coordinates) {
-        const squareColumnRow = this.squareCoordinatesToColumnRowIndex(coordinates);
+    static getVerticalAdjacentCoordinates(coordinates) {
+        const squareColumnRowIndex = this.squareCoordinatesToColumnRowIndex(coordinates);
 
         // Up
         const up = this.squareColumnRowIndexToCoordinates(
-            squareColumnRow.columnIndex, squareColumnRow.rowIndex - 1);
+            squareColumnRowIndex.columnIndex, squareColumnRowIndex.rowIndex - 1);
         // Down
         const down = this.squareColumnRowIndexToCoordinates(
-            squareColumnRow.columnIndex, squareColumnRow.rowIndex + 1);
-        // Right
-        const left = this.squareColumnRowIndexToCoordinates(
-            squareColumnRow.columnIndex - 1, squareColumnRow.rowIndex);
-        // Left
-        const right = this.squareColumnRowIndexToCoordinates(
-            squareColumnRow.columnIndex + 1, squareColumnRow.rowIndex);
+            squareColumnRowIndex.columnIndex, squareColumnRowIndex.rowIndex + 1);
 
         return {
             up: up,
-            down: down,
+            down: down
+        };
+    }
+    static getHorizontalAdjacentCoordinates(coordinates) {
+        const squareColumnRowIndex = this.squareCoordinatesToColumnRowIndex(coordinates);
+
+        const left = this.squareColumnRowIndexToCoordinates(
+            squareColumnRowIndex.columnIndex - 1, squareColumnRowIndex.rowIndex);
+        // Left
+        const right = this.squareColumnRowIndexToCoordinates(
+            squareColumnRowIndex.columnIndex + 1, squareColumnRowIndex.rowIndex);
+
+        return {
             left: left,
             right: right
         };
     }
+    static getAdjacentCoordinates(coordinates) {
+        // Vertical
+        const vertical = this.getVerticalAdjacentCoordinates(coordinates)
+        // Horizontal
+        const horizontal = this.getHorizontalAdjacentCoordinates(coordinates)
+
+        return {
+            up: vertical.up,
+            down: vertical.down,
+            left: horizontal.left,
+            right: horizontal.right
+        };
+    }
+    static getColumnCoordinates(coordinates) {
+        const columnIndex = this.squareCoordinatesToColumnRowIndex(coordinates).columnIndex;
+        const columnCoordinates = [];
+
+        for (let i = 0; i < SETTINGS.boardLength; i++) {
+            columnCoordinates.push(this.squareColumnRowIndexToCoordinates(columnIndex, i));
+        }
+
+        return columnCoordinates;
+    }
+    static getRowCoordinates(coordinates) {
+        const rowIndex = this.squareCoordinatesToColumnRowIndex(coordinates).rowIndex;
+        const rowCoordinates = [];
+
+        for (let i = 0; i < SETTINGS.boardLength; i++) {
+            rowCoordinates.push(this.squareColumnRowIndexToCoordinates(i, rowIndex));
+        }
+
+        return rowCoordinates;
+    }
+}
+class UtilHelpers {
     static randomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
@@ -159,12 +202,12 @@ class SetupHelpers {
         const squares = new Map();
         const squareOrder = [];
 
-        for (let i = 0; i < 15 * 15; i++) {
-            const coordinates = UtilHelpers.squareIndexToCoordinates(i);
+        for (let i = 0; i < SETTINGS.boardLength * SETTINGS.boardLength; i++) {
+            const coordinates = GridHelpers.squareIndexToCoordinates(i);
             const type = PREMIUM_SQUARE_DATA.hasOwnProperty(coordinates) ?
                 PREMIUM_SQUARE_DATA[coordinates].type : 'np';
-            const columnIndex = i % 15;
-            const rowIndex = Math.floor(i / 15);
+            const columnIndex = i % SETTINGS.boardLength;
+            const rowIndex = Math.floor(i / SETTINGS.boardLength);
             const newSquare = new Square({ type: type, coordinates: coordinates, columnIndex: columnIndex, rowIndex: rowIndex });
 
             squares.set(coordinates, newSquare);
@@ -407,20 +450,18 @@ class CurrentPlayerTilesDisplay extends React.Component {
         const tileDisplays = [];
 
         for (let tile of this.props.currentPlayerTiles) {
-            if (!this.props.placedTileIds.has(tile.tileId)) {
-                tileDisplays.push(
-                    <TileDisplay currentGamePhase={this.props.currentGamePhase}
-                        key={tile.tileId}
-                        tileId={tile.tileId}
-                        letter={tile.letter}
-                        point={tile.point}
-                        selected={this.props.selectedTileId === tile.tileId}
-                        TileDisplayCallback={(tileId) => {
-                            console.log('updating selectedTileId');
-                            this.props.currentPlayerTilesDisplayCallback(tileId);
-                        }} />
-                );
-            }
+            tileDisplays.push(
+                <TileDisplay currentGamePhase={this.props.currentGamePhase}
+                    key={tile.tileId}
+                    tileId={tile.tileId}
+                    letter={tile.letter}
+                    point={tile.point}
+                    selected={this.props.selectedTileId === tile.tileId}
+                    TileDisplayCallback={(tileId) => {
+                        console.log('updating selectedTileId');
+                        this.props.currentPlayerTilesDisplayCallback(tileId);
+                    }} />
+            );
         }
         // TO DO: Implement looking up tileIds
         return (
@@ -470,32 +511,69 @@ class InputButtonsDisplay extends React.Component {
 class Scrabble extends React.Component {
     constructor(props) {
         super(props);
-        const playerSetupData = SetupHelpers.loadPlayers();
-        const squareSetupData = SetupHelpers.loadSquares();
-        const tileSetupData = SetupHelpers.loadTiles();
+        this.gamePhases = ['play/exchange', 'place', 'draw', 'end'];
+        this.currentGamePhaseIndex = 0;
 
-        // These will not be used in child components, no need to track them in state 
-        this.tiles = tileSetupData.tiles;
-        this.players = playerSetupData.players;
-        this.undrawnTileIds = tileSetupData.tileOrder;
+        // These will not be used in child components, no need to track them in state
+        this.tiles;
+        this.undrawnTileIds;
         this.drawnTileIds = [];
 
-        this.playerOrder = playerSetupData.playerOrder;
-        this.currentPlayerIndex = 0;
-        this.squareOrder = squareSetupData.squareOrder;
+        this.squareOrder;
 
-        this.gamePhases = ['draw', 'play/exchange', 'place', 'end'];
-        this.currentGamePhaseIndex = 0;
+        this.players;
+        this.playerOrder;
+        this.currentPlayerIndex = 0;
+
+        this.dictionary;
 
         this.state = {
             currentGamePhase: this.gamePhases[this.currentGamePhaseIndex],
-            squares: squareSetupData.squares,
+            gameState: 'loading',
+            squares: new Map(),
             playedTileIds: [],
             placedTileIds: [],
-            selectedTileId: undefined,
-            currentPlayerId: this.playerOrder[this.currentPlayerIndex],
+            selectedTileId: '',
+            currentPlayerId: '',
             turn: 1
         };
+
+        Promise.all([
+            new Promise((resolve) => resolve(SetupHelpers.loadTiles())),
+            new Promise((resolve) => resolve(SetupHelpers.loadSquares())),
+            new Promise((resolve) => resolve(SetupHelpers.loadPlayers())),
+            fetch(SETTINGS.dictionaryUrl).then(response => response.text())
+        ]).then(([
+            tileSetupData,
+            squareSetupData,
+            playerSetupData,
+            dictionaryText
+        ]) => {
+
+            this.tiles = tileSetupData.tiles;
+            this.undrawnTileIds = tileSetupData.tileOrder;
+
+            this.squareOrder = squareSetupData.squareOrder;
+
+            this.players = playerSetupData.players;
+            this.playerOrder = playerSetupData.playerOrder; this.players.forEach((player) => {
+                this.drawTile({ player: player });
+            });
+
+            this.dictionary = new Set(dictionaryText.split(/\n|\r/g));
+            console.log(`dictionary loaded. size = ${this.dictionary.size}`);
+
+            this.setState({
+                gameState: 'ready',
+                currentPlayerId: this.playerOrder[this.currentPlayerIndex],
+                squares: squareSetupData.squares
+            });
+        }).catch(error => {
+            this.setState({
+                gameState: 'error'
+            });
+            console.log(error);
+        });
     }
 
     drawTile({ player = this.players.get(this.state.currentPlayerId) } = {}) {
@@ -560,8 +638,9 @@ class Scrabble extends React.Component {
 
             const currentPlayer = this.players.get(this.state.currentPlayerId);
 
-            this.state.placedTileIds.forEach((tileIds) => {
-                this.tiles.get(tileIds).coordinates = undefined;
+            this.state.placedTileIds.forEach((tileId) => {
+                this.tiles.get(tileId).coordinates = undefined;
+                currentPlayer.tileIds.add(tileId);
             });
 
             updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex];
@@ -576,29 +655,7 @@ class Scrabble extends React.Component {
         }
     }
     playPlacedTiles() {
-        console.log('placedTileIds: ');
-        console.log(this.state.placedTileIds);
-        this.state.placedTileIds.forEach((tileId) => {
-            this.state.playedTileIds.push(tileId);
-        });
-
-        this.state.placedTileIds = [];
-        console.log('playedTileIds: ');
-        console.log(this.state.playedTileIds);
-
         // Add api check here
-    }
-
-    render() {
-        // Refract these into functions
-        const currentPlayer = this.players.get(this.state.currentPlayerId);
-        const currentPlayerTiles = [];
-
-        console.log(currentPlayer);
-        currentPlayer.tileIds.forEach((tileId) => {
-            currentPlayerTiles.push(this.tiles.get(tileId));
-        });
-
         const placedLetters = new Map(); // For GameBoard
         const placedSquareCoordinates = []; // For GameBoard
         this.state.placedTileIds.forEach((tileId) => {
@@ -615,188 +672,259 @@ class Scrabble extends React.Component {
             playedSquareCoordinates.push(tile.coordinates);
         });
 
-        const playableSquareCoordinates = []; // For GameBoard
-        if (this.state.currentGamePhase === 'place') {
-            if (this.state.placedTileIds.length === 0) {
-                console.log('no square is placed yet');
-                if (this.state.playedTileIds.length === 0) {
-                    console.log('no square is played yet');
-                    playableSquareCoordinates.push('H|8');
-                } else {
-                    this.state.playedTileIds.forEach((tileId) => {
-                        const tile = this.tiles.get(tileId);
-                        const adjacentCoordinates = UtilHelpers.getAdjacentCoordinates(tile.coordinates);
+        const squareCoordinates = [...placedSquareCoordinates, ...playedSquareCoordinates];
 
-                        if (this.state.squares.has(adjacentCoordinates.up) &&
-                            playedSquareCoordinates.indexOf(adjacentCoordinates.up) === -1) {
-                            playableSquareCoordinates.push(adjacentCoordinates.up);
-                        }
-                        if (this.state.squares.has(adjacentCoordinates.down) &&
-                            playedSquareCoordinates.indexOf(adjacentCoordinates.down) === -1) {
-                            playableSquareCoordinates.push(adjacentCoordinates.down);
-                        }
-                        if (this.state.squares.has(adjacentCoordinates.left) &&
-                            playedSquareCoordinates.indexOf(adjacentCoordinates.left) === -1) {
-                            playableSquareCoordinates.push(adjacentCoordinates.left);
-                        }
-                        if (this.state.squares.has(adjacentCoordinates.right) &&
-                            playedSquareCoordinates.indexOf(adjacentCoordinates.right) === -1) {
-                            playableSquareCoordinates.push(adjacentCoordinates.right);
-                        }
-                    });
-                }
-            } else {
-                console.log('at least one square is placed');
-                if (this.state.placedTileIds.length > 0) {
+
+        // Api check passed, empty placedTileIds into playedTileIds
+        console.log('placedTileIds: ');
+        console.log(this.state.placedTileIds);
+        this.state.placedTileIds.forEach((tileId) => {
+            this.state.playedTileIds.push(tileId);
+        });
+
+        this.state.placedTileIds = [];
+        console.log('playedTileIds: ');
+        console.log(this.state.playedTileIds);
+    }
+
+    render() {
+        if (this.state.gameState === 'error') {
+            return (
+                <p>Error</p>
+            );
+        }
+        if (this.state.gameState === 'loading') {
+            return (
+                <p>Loading...</p>
+            );
+        } else if (this.state.gameState === 'ready') {
+            // Refract these into functions
+            const currentPlayer = this.players.get(this.state.currentPlayerId);
+            const currentPlayerTiles = [];
+
+            console.log(currentPlayer);
+            currentPlayer.tileIds.forEach((tileId) => {
+                currentPlayerTiles.push(this.tiles.get(tileId));
+            });
+
+            const placedLetters = new Map(); // For GameBoard
+            const placedSquareCoordinates = []; // For GameBoard
+            this.state.placedTileIds.forEach((tileId) => {
+                const tile = this.tiles.get(tileId);
+                placedLetters.set(tile.coordinates, tile.letter);
+                placedSquareCoordinates.push(tile.coordinates);
+            });
+
+            const playedLetters = new Map();
+            const playedSquareCoordinates = [];
+            this.state.playedTileIds.forEach((tileId) => {
+                const tile = this.tiles.get(tileId);
+                playedLetters.set(tile.coordinates, tile.letter);
+                playedSquareCoordinates.push(tile.coordinates);
+            });
+
+            const playableSquareCoordinates = []; // For GameBoard
+            if (this.state.currentGamePhase === 'place') {
+                if (this.state.placedTileIds.length === 0) {
+                    console.log('no square is placed yet');
+                    if (this.state.playedTileIds.length === 0) {
+                        console.log('no square is played yet');
+                        playableSquareCoordinates.push('H|8');
+                    } else {
+                        this.state.playedTileIds.forEach((tileId) => {
+                            const tile = this.tiles.get(tileId);
+                            const adjacentCoordinates = GridHelpers.getAdjacentCoordinates(tile.coordinates);
+
+                            if (this.state.squares.has(adjacentCoordinates.up) &&
+                                playedSquareCoordinates.indexOf(adjacentCoordinates.up) === -1) {
+                                playableSquareCoordinates.push(adjacentCoordinates.up);
+                            }
+                            if (this.state.squares.has(adjacentCoordinates.down) &&
+                                playedSquareCoordinates.indexOf(adjacentCoordinates.down) === -1) {
+                                playableSquareCoordinates.push(adjacentCoordinates.down);
+                            }
+                            if (this.state.squares.has(adjacentCoordinates.left) &&
+                                playedSquareCoordinates.indexOf(adjacentCoordinates.left) === -1) {
+                                playableSquareCoordinates.push(adjacentCoordinates.left);
+                            }
+                            if (this.state.squares.has(adjacentCoordinates.right) &&
+                                playedSquareCoordinates.indexOf(adjacentCoordinates.right) === -1) {
+                                playableSquareCoordinates.push(adjacentCoordinates.right);
+                            }
+                        });
+                    }
+                } else {
+                    console.log('at least one square is placed');
                     const firstPlacedSquareCoordinates = placedSquareCoordinates[0];
                     const firstPlacedSquare = this.state.squares.get(firstPlacedSquareCoordinates);
-                    let placingDirection = undefined;
+                    const squareCoordinates = new Set([...playedSquareCoordinates, ...placedSquareCoordinates]);
+                    console.log('squareCoordinates: ');
+                    console.log(squareCoordinates);
+
+                    let placingDirection = 'both';
 
                     // Second placed square will determine the direction
                     if (this.state.placedTileIds.length > 1) {
                         const secondPlacedSquareCoordinates = placedSquareCoordinates[1];
-
                         const secondPlacedSquare = this.state.squares.get(secondPlacedSquareCoordinates);
-                        if (secondPlacedSquare.rowIndex === firstPlacedSquare.rowIndex) {
-                            placingDirection = 'horizontal';
-                        } else if (secondPlacedSquare.columnIndex === firstPlacedSquare.columnIndex) {
+
+                        if (secondPlacedSquare.columnIndex === firstPlacedSquare.columnIndex) {
                             placingDirection = 'vertical';
+                        } else if (secondPlacedSquare.rowIndex === firstPlacedSquare.rowIndex) {
+                            placingDirection = 'horizontal';
                         }
                     }
 
-                    console.log(`placingDirection: ${placingDirection}`);
-                    console.log('state.placedTileIds: ');
-                    console.log(this.state.placedTileIds);
-                    placedSquareCoordinates.forEach((coordinates) => {
-                        const adjacentCoordinates = UtilHelpers.getAdjacentCoordinates(coordinates);
+                    // Vertical
+                    if (placingDirection === 'vertical' || placingDirection === 'both') {
+                        const columnCoordinates = GridHelpers.getColumnCoordinates(firstPlacedSquareCoordinates);
+                        let squareColumnString = '';
 
-                        if (placingDirection === undefined || placingDirection === 'vertical') {
-                            if (this.state.squares.has(adjacentCoordinates.up) &&
-                                placedSquareCoordinates.indexOf(adjacentCoordinates.up) === -1 &&
-                                playedSquareCoordinates.indexOf(adjacentCoordinates.up) === -1 && playableSquareCoordinates.indexOf(adjacentCoordinates.up) === -1) {
-                                console.log('adding playable up ' + adjacentCoordinates.up);
-                                playableSquareCoordinates.push(adjacentCoordinates.up);
+                        columnCoordinates.forEach((coordinates) => {
+                            if (squareCoordinates.has(coordinates)) {
+                                squareColumnString += coordinates + '/';
+                            } else {
+                                squareColumnString += ' ';
                             }
-                            if (this.state.squares.has(adjacentCoordinates.down) &&
-                                placedSquareCoordinates.indexOf(adjacentCoordinates.down) === -1 &&
-                                playedSquareCoordinates.indexOf(adjacentCoordinates.down) === -1 && playableSquareCoordinates.indexOf(adjacentCoordinates.down) === -1) {
-                                console.log('adding playable down' + adjacentCoordinates.down);
-                                playableSquareCoordinates.push(adjacentCoordinates.down);
-                            }
-                        }
+                        });
+                        const squareColumnGroups = squareColumnString.replace(/\s+/g, " ").trim().split(' ').map((s) => s.substring(0, s.length - 1).split('/'));
+                        console.log('squareColumnGroups: ');
+                        console.log(squareColumnGroups);
+                        const firstPlacedSquareColumnGroup = squareColumnGroups.find((g) => g.indexOf(firstPlacedSquareCoordinates) !== -1);
+                        firstPlacedSquareColumnGroup.forEach((coordinates) => {
+                            const verticalAdjacentCoordinates = GridHelpers.getVerticalAdjacentCoordinates(coordinates);
+                            const up = verticalAdjacentCoordinates.up;
+                            const down = verticalAdjacentCoordinates.down;
 
+                            if (!squareCoordinates.has(up)) {
+                                playableSquareCoordinates.push(up);
+                            }
 
-                        if (placingDirection === undefined || placingDirection === 'horizontal') {
-                            if (this.state.squares.has(adjacentCoordinates.left) &&
-                                placedSquareCoordinates.indexOf(adjacentCoordinates.left) === -1 &&
-                                playedSquareCoordinates.indexOf(adjacentCoordinates.left) === -1 && playableSquareCoordinates.indexOf(adjacentCoordinates.left) === -1) {
-                                console.log('adding playable left' + adjacentCoordinates.left);
-                                playableSquareCoordinates.push(adjacentCoordinates.left);
+                            if (!squareCoordinates.has(down)) {
+                                playableSquareCoordinates.push(down);
                             }
-                            if (this.state.squares.has(adjacentCoordinates.right) &&
-                                placedSquareCoordinates.indexOf(adjacentCoordinates.right) === -1 &&
-                                playedSquareCoordinates.indexOf(adjacentCoordinates.right) === -1 && playableSquareCoordinates.indexOf(adjacentCoordinates.right) === -1) {
-                                console.log('adding playable right' + adjacentCoordinates.right);
-                                playableSquareCoordinates.push(adjacentCoordinates.right);
+                        });
+                    }
+                    // Horizontal
+                    if (placingDirection === 'horizontal' || placingDirection === 'both') {
+                        const rowCoordinates = GridHelpers.getRowCoordinates(firstPlacedSquareCoordinates);
+                        let squareRowString = '';
+
+                        rowCoordinates.forEach((coordinates) => {
+                            if (squareCoordinates.has(coordinates)) {
+                                squareRowString += coordinates + '/';
+                            } else {
+                                squareRowString += ' ';
                             }
-                        }
-                    });
+                        });
+                        const squareRowGroups = squareRowString.replace(/\s+/g, " ").trim().split(' ').map((s) => s.substring(0, s.length - 1).split('/'));
+                        console.log('squareRowGroups: ');
+                        console.log(squareRowGroups);
+                        const firstPlacedSquareRowGroup = squareRowGroups.find((g) => g.indexOf(firstPlacedSquareCoordinates) !== -1);
+                        firstPlacedSquareRowGroup.forEach((coordinates) => {
+                            const horizontalAdjacentCoordinates = GridHelpers.getHorizontalAdjacentCoordinates(coordinates);
+                            const left = horizontalAdjacentCoordinates.left;
+                            const right = horizontalAdjacentCoordinates.right;
+
+                            if (!squareCoordinates.has(left)) {
+                                playableSquareCoordinates.push(left);
+                            }
+
+                            if (!squareCoordinates.has(right)) {
+                                playableSquareCoordinates.push(right);
+                            }
+                        });
+                    }
                 }
             }
-        }
 
-        console.log(`placed: `);
-        console.log(placedSquareCoordinates);
-        console.log(`playable: `);
-        console.log(playableSquareCoordinates);
-        console.log(`played: `);
-        console.log(playedSquareCoordinates);
 
-        return (
-            <div id="scrabble" >
-                <div id="scrabble__game" className="page">
-                    <GameBoard currentGamePhase={this.state.currentGamePhase}
-                        squares={this.state.squares}
-                        squareOrder={this.squareOrder}
-                        placedLetters={placedLetters}
-                        playedLetters={playedLetters}
-                        playableSquareCoordinates={new Set(playableSquareCoordinates)}
-                        placedSquareCoordinates={new Set(placedSquareCoordinates)}
-                        playedSquareCoordinates={new Set(playedSquareCoordinates)}
-                        gameBoardCallback={(coordinates) => {
-                            // Assume placeTile is never called if no tile is selected
-                            console.log(`callback received from GameBoard at ${coordinates}`);
-                            if (this.state.selectedTileId !== undefined) {
-                                const updatedStateProperties = {};
+            console.log(`placed: `);
+            console.log(placedSquareCoordinates);
+            console.log(`playable: `);
+            console.log(playableSquareCoordinates);
+            console.log(`played: `);
+            console.log(playedSquareCoordinates);
 
-                                const squares = this.state.squares;
-                                const square = this.state.squares.get(coordinates);
+            return (
+                <div id="scrabble" >
+                    <div id="scrabble__game" className="page">
+                        <GameBoard currentGamePhase={this.state.currentGamePhase}
+                            squares={this.state.squares}
+                            squareOrder={this.squareOrder}
+                            placedLetters={placedLetters}
+                            playedLetters={playedLetters}
+                            playableSquareCoordinates={new Set(playableSquareCoordinates)}
+                            placedSquareCoordinates={new Set(placedSquareCoordinates)}
+                            playedSquareCoordinates={new Set(playedSquareCoordinates)}
+                            gameBoardCallback={(coordinates) => {
+                                // Assume placeTile is never called if no tile is selected
+                                console.log(`callback received from GameBoard at ${coordinates}`);
+                                if (this.state.selectedTileId !== undefined) {
+                                    const updatedStateProperties = {};
 
-                                square.tileId = this.state.selectedTileId;
-                                squares.set(coordinates, square);
-                                updatedStateProperties.squares = squares;
+                                    const squares = this.state.squares;
+                                    const square = this.state.squares.get(coordinates);
 
-                                const tile = this.tiles.get(this.state.selectedTileId);
+                                    square.tileId = this.state.selectedTileId;
+                                    squares.set(coordinates, square);
+                                    updatedStateProperties.squares = squares;
 
-                                tile.coordinates = coordinates;
-                                this.tiles.set(this.state.selectedTileId, tile);
+                                    const tile = this.tiles.get(this.state.selectedTileId);
 
-                                const placedTileIds = this.state.placedTileIds;
-                                placedTileIds.push(this.state.selectedTileId);
-                                updatedStateProperties.placedTileIds = placedTileIds;
+                                    tile.coordinates = coordinates;
+                                    this.tiles.set(this.state.selectedTileId, tile);
 
-                                updatedStateProperties.selectedTileId = undefined;
+                                    const placedTileIds = this.state.placedTileIds;
+                                    placedTileIds.push(this.state.selectedTileId);
+                                    updatedStateProperties.placedTileIds = placedTileIds;
+                                    updatedStateProperties.selectedTileId = undefined;
+                                    currentPlayer.tileIds.delete(this.state.selectedTileId);
 
-                                this.setState(updatedStateProperties, () => {
-                                    console.log('tile placed.');
-                                });
-                            }
-                        }} />
-                    <GameStatsDisplay currentGamePhase={this.state.currentGamePhase}
-                        selectedTileId={this.state.selectedTileId}
-                        currentPlayer={currentPlayer}
-                        turn={this.state.turn} />
-                    <InputButtonsDisplay currentGamePhase={this.state.currentGamePhase}
-                        inputButtonsCallback={(choice) => {
-                            // Draw -> Play/exchange -> Place(skip if exchange) -> End
-
-                            // Draw phase
-                            if (choice === 'draw') {
-                                this.drawTile();
-                                this.nextGamePhase();
-
+                                    this.setState(updatedStateProperties, () => {
+                                        console.log('tile placed.');
+                                    });
+                                }
+                            }} />
+                        <GameStatsDisplay currentGamePhase={this.state.currentGamePhase}
+                            selectedTileId={this.state.selectedTileId}
+                            currentPlayer={currentPlayer}
+                            turn={this.state.turn} />
+                        <InputButtonsDisplay currentGamePhase={this.state.currentGamePhase}
+                            inputButtonsCallback={(choice) => {
+                                // Draw -> Play/exchange -> Place(skip if exchange) -> End
                                 // Play/exchange phase
-                            } else if (choice === 'play') {
-                                this.nextGamePhase();
-                            } else if (choice === 'exchange') {
-                                this.exchangeTile();
-                                this.nextGamePhase({ skipNextPhase: true });
-
-                                // Place phase (skip if player picked exchange)
-                            } else if (choice === 'place') {
-                                this.playPlacedTiles();
-                                this.nextGamePhase();
-                            } else if (choice === 'cancel') {
-                                this.cancelPlaceGamePhase();
-
-                                // End Phase
-                            } else if (choice === 'end') {
-                                this.nextGamePhase();
-                            }
-                        }} />
-                    <CurrentPlayerTilesDisplay currentGamePhase={this.state.currentGamePhase}
-                        selectedTileId={this.state.selectedTileId}
-                        placedTileIds={new Set(this.state.placedTileIds)}
-                        currentPlayerTiles={currentPlayerTiles}
-                        currentPlayerTilesDisplayCallback={(selectedTileId) => {
-                            this.setState({ selectedTileId: selectedTileId });
-                        }} />
+                                if (choice === 'play') {
+                                    this.nextGamePhase();
+                                } else if (choice === 'exchange') {
+                                    this.exchangeTile();
+                                    this.nextGamePhase({ skipNextPhase: true });
+                                } else if (choice === 'place') {
+                                    this.playPlacedTiles();
+                                    this.nextGamePhase();
+                                } else if (choice === 'cancel') {
+                                    this.cancelPlaceGamePhase();
+                                } else if (choice === 'draw') {
+                                    this.drawTile();
+                                    this.nextGamePhase();
+                                } else if (choice === 'end') {
+                                    this.nextGamePhase();
+                                }
+                            }} />
+                        <CurrentPlayerTilesDisplay currentGamePhase={this.state.currentGamePhase}
+                            selectedTileId={this.state.selectedTileId}
+                            placedTileIds={new Set(this.state.placedTileIds)}
+                            currentPlayerTiles={currentPlayerTiles}
+                            currentPlayerTilesDisplayCallback={(selectedTileId) => {
+                                this.setState({ selectedTileId: selectedTileId });
+                            }} />
+                    </div>
+                    <ScoreBoard currentGamePhase={this.state.currentGamePhase}
+                        players={this.players}
+                        playerOrder={this.playerOrder} />
                 </div>
-                <ScoreBoard currentGamePhase={this.state.currentGamePhase}
-                    players={this.players}
-                    playerOrder={this.playerOrder} />
-            </div>
-        );
+            );
+        }
     }
 }
 
