@@ -163,7 +163,7 @@ class GridHelpers {
             right: horizontal.right
         };
     }
-    static getColumnCoordinates(coordinates) {
+    static getColumnFromCoordinates(coordinates) {
         const columnIndex = this.squareCoordinatesToColumnRowIndex(coordinates).columnIndex;
         const columnCoordinates = [];
 
@@ -279,6 +279,13 @@ class Tile {
     }
 }
 
+class GamePhase {
+    constructor({ name, message } = {}) {
+        this.name = name;
+        this.message = message;
+    }
+}
+
 class Player {
     constructor({ name = 'Player' } = {}) {
         this.playerId = UtilHelpers.generateUUID();
@@ -310,7 +317,7 @@ class SquareDisplay extends React.Component {
                     () => {
                         this.props.squareDisplayCallback(this.props.coordinates);
                     } : () => {
-                        console.log('current game phase is not play or a tile is already placed on this square');
+                        console.log('current game phase is not place or a tile is already placed on this square');
                     }}>
                 <p>{this.props.coordinates}</p>
                 <p>{this.props.letter}</p>
@@ -350,7 +357,6 @@ class GameBoard extends React.Component {
                     isPlaced={this.props.placedSquareCoordinates.has(coordinates)}
                     isPlayed={this.props.playedSquareCoordinates.has(coordinates)}
                     squareDisplayCallback={(coordinates) => {
-                        console.log('callback from squareDisplay');
                         this.props.gameBoardCallback(coordinates);
                     }} />
             );
@@ -412,10 +418,9 @@ class GameStatsDisplay extends React.Component {
         return (
             <div id="playerInput__stats">
                 <p>Current Player: {this.props.currentPlayer.name}</p>
-                <p>Selected Tile Id: {this.props.selectedTileId}</p>
-                <p>Id: {this.props.currentPlayer.playerId}</p>
                 <p>Current Phase: {this.props.currentGamePhase}</p>
                 <p>Turn: {this.props.turn}</p>
+                <p>{this.props.message}</p>
             </div>
         );
     }
@@ -458,7 +463,6 @@ class CurrentPlayerTilesDisplay extends React.Component {
                     point={tile.point}
                     selected={this.props.selectedTileId === tile.tileId}
                     TileDisplayCallback={(tileId) => {
-                        console.log('updating selectedTileId');
                         this.props.currentPlayerTilesDisplayCallback(tileId);
                     }} />
             );
@@ -511,7 +515,12 @@ class InputButtonsDisplay extends React.Component {
 class Scrabble extends React.Component {
     constructor(props) {
         super(props);
-        this.gamePhases = ['play/exchange', 'place', 'draw', 'end'];
+        this.gamePhases = [
+            new GamePhase({ name: 'play/exchange', message: 'You can place tile(s) on the board or exchange your current tiles.' }),
+            new GamePhase({ name: 'place', message: 'Select a tile to be placed then select a square for it to be placed on.' }),
+            new GamePhase({ name: 'draw', message: 'Draw as many letters as you played.' }),
+            new GamePhase({ name: 'end', message: 'Ending Turn.' })
+        ];
         this.currentGamePhaseIndex = 0;
 
         // These will not be used in child components, no need to track them in state
@@ -528,8 +537,8 @@ class Scrabble extends React.Component {
         this.dictionary;
 
         this.state = {
-            currentGamePhase: this.gamePhases[this.currentGamePhaseIndex],
             gameState: 'loading',
+            currentGamePhaseIndex: 0,
             squares: new Map(),
             playedTileIds: [],
             placedTileIds: [],
@@ -605,14 +614,14 @@ class Scrabble extends React.Component {
         this.drawTile(player);
     }
 
-    nextGamePhase(skipNextPhase = false) {
-        this.currentGamePhaseIndex++;
+    nextGamePhase(skipNextPhase = false, customMessage) {
+        let currentGamePhaseIndex = this.state.currentGamePhaseIndex + 1;
         if (!skipNextPhase) {
             const updatedStateProperties = {};
 
-            if (this.currentGamePhaseIndex === this.gamePhases.length) {
+            if (currentGamePhaseIndex === this.gamePhases.length) {
                 console.log('going to next player.')
-                this.currentGamePhaseIndex = 0;
+                currentGamePhaseIndex = 0;
                 this.currentPlayerIndex++;
 
                 if (this.currentPlayerIndex === this.playerOrder.length) {
@@ -623,16 +632,20 @@ class Scrabble extends React.Component {
                 updatedStateProperties.turn = this.state.turn + 1;
             }
 
-            updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex];
+            updatedStateProperties.currentGamePhaseIndex = currentGamePhaseIndex;
+
+            updatedStateProperties.selectedTileId = undefined;
+
             this.setState(updatedStateProperties, () => {
-                console.log(`current game phase is ${this.state.currentGamePhase} `);
+                console.log(`current game phase is ${this.gamePhases[this.state.currentGamePhaseIndex].name}`);
             });
         } else {
             this.nextGamePhase();
         }
     }
-    cancelPlaceGamePhase() {
-        if (this.state.currentGamePhase === 'place') {
+
+    cancelPlaceGamePhase(customMessage) {
+        if (this.gamePhases[this.state.currentGamePhaseIndex] === 'place') {
             this.currentGamePhaseIndex--;
             const updatedStateProperties = {};
 
@@ -643,7 +656,7 @@ class Scrabble extends React.Component {
                 currentPlayer.tileIds.add(tileId);
             });
 
-            updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex];
+            updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex].name;
             updatedStateProperties.placedTileIds = [];
             updatedStateProperties.selectedTileId = undefined;
 
@@ -654,37 +667,164 @@ class Scrabble extends React.Component {
             console.log('current game phase is not place');
         }
     }
+
     playPlacedTiles() {
-        // Add api check here
-        const placedLetters = new Map(); // For GameBoard
-        const placedSquareCoordinates = []; // For GameBoard
+        const boardTiles = new Map();
+
+        const placedSquareCoordinates = [];
         this.state.placedTileIds.forEach((tileId) => {
             const tile = this.tiles.get(tileId);
-            placedLetters.set(tile.coordinates, tile.letter);
+            boardTiles.set(tile.coordinates, tile);
             placedSquareCoordinates.push(tile.coordinates);
         });
 
-        const playedLetters = new Map();
         const playedSquareCoordinates = [];
         this.state.playedTileIds.forEach((tileId) => {
             const tile = this.tiles.get(tileId);
-            playedLetters.set(tile.coordinates, tile.letter);
+            boardTiles.set(tile.coordinates, tile);
             playedSquareCoordinates.push(tile.coordinates);
         });
 
-        const squareCoordinates = [...placedSquareCoordinates, ...playedSquareCoordinates];
+        const squareCoordinates = new Set([...placedSquareCoordinates, ...playedSquareCoordinates]);
 
+        // Get every column that a tile was placed on
+        const placedColumnIndexes = new Set();
+        const placedRowIndexes = new Set();
+        placedSquareCoordinates.forEach((coordinates) => {
+            const squareColumnRowIndex = GridHelpers.squareCoordinatesToColumnRowIndex(coordinates);
+            placedColumnIndexes.add(squareColumnRowIndex.columnIndex);
+            placedRowIndexes.add(squareColumnRowIndex.rowIndex);
+        });
 
-        // Api check passed, empty placedTileIds into playedTileIds
-        console.log('placedTileIds: ');
-        console.log(this.state.placedTileIds);
+        let placedWords = [];
+        // Checking columns 
+        placedColumnIndexes.forEach((columnIndex) => {
+            const columnCoordinates = [];
+            for (let i = 0; i < SETTINGS.boardLength; i++) {
+                columnCoordinates.push(GridHelpers.squareColumnRowIndexToCoordinates(columnIndex, i));
+            }
+
+            let squareColumnString = '';
+            columnCoordinates.forEach((coordinates) => {
+                if (squareCoordinates.has(coordinates)) {
+                    squareColumnString += coordinates + '+';
+                } else {
+                    squareColumnString += ' ';
+                }
+            });
+
+            const squareColumnWords = squareColumnString.replace(/\s+/g, ' ').trim().split(' ').map((s) => {
+                const letterCoordinates = s.substring(0, s.length - 1).split('+');
+                let wordMultiplier = 1;
+                let word = '';
+                let points = 0;
+
+                letterCoordinates.forEach((coordinates) => {
+                    const square = this.state.squares.get(coordinates);
+
+                    switch (square.squareType) {
+                        case 'dl':
+                            console.log(`double letter points at ${coordinates}`);
+                            points += boardTiles.get(coordinates).point * 2;
+                            break;
+                        case 'tl':
+                            console.log(`triple letter points at ${coordinates}`);
+                            points += boardTiles.get(coordinates).point * 3;
+                            break;
+                        case 'dw':
+                            wordMultiplier *= 2;
+                            break;
+                        case 'tw':
+                            wordMultiplier *= 3;
+                            break;
+                        default:
+                            points += boardTiles.get(coordinates).point;
+                    }
+
+                    word += boardTiles.get(coordinates).letter;
+                });
+
+                return {
+                    word: word,
+                    points: points * wordMultiplier,
+                    containsPlacedTile: letterCoordinates.reduce((accumulator, coordinates) => {
+                        return accumulator || placedSquareCoordinates.indexOf(coordinates) !== -1;
+                    }, false),
+                    isValidWord: this.dictionary.has(word.toLowerCase())
+                };
+            }).filter((wordObject) => wordObject.word.length > 1 && wordObject.containsPlacedTile);
+
+            placedWords = [...placedWords, ...squareColumnWords];
+        });
+
+        // Checking rows
+        placedRowIndexes.forEach((rowIndex) => {
+            const rowCoordinates = [];
+            for (let i = 0; i < SETTINGS.boardLength; i++) {
+                rowCoordinates.push(GridHelpers.squareColumnRowIndexToCoordinates(i, rowIndex));
+            }
+
+            let squareRowString = '';
+            rowCoordinates.forEach((coordinates) => {
+                if (squareCoordinates.has(coordinates)) {
+                    squareRowString += coordinates + '+';
+                } else {
+                    squareRowString += ' ';
+                }
+            });
+
+            const squareRowWords = squareRowString.replace(/\s+/g, ' ').trim().split(' ').map((s) => {
+                const letterCoordinates = s.substring(0, s.length - 1).split('+');
+                let wordMultiplier = 1;
+                let word = '';
+                let points = 0;
+
+                letterCoordinates.forEach((coordinates) => {
+                    const square = this.state.squares.get(coordinates);
+
+                    switch (square.squareType) {
+                        case 'dl':
+                            console.log(`double letter points at ${coordinates}`);
+                            points += boardTiles.get(coordinates).point * 2;
+                            break;
+                        case 'tl':
+                            console.log(`triple letter points at ${coordinates}`);
+                            points += boardTiles.get(coordinates).point * 3;
+                            break;
+                        case 'dw':
+                            wordMultiplier *= 2;
+                            break;
+                        case 'tw':
+                            wordMultiplier *= 3;
+                            break;
+                        default:
+                            points += boardTiles.get(coordinates).point;
+                    }
+
+                    word += boardTiles.get(coordinates).letter;
+                });
+
+                return {
+                    word: word,
+                    points: points * wordMultiplier,
+                    containsPlacedTile: letterCoordinates.reduce((accumulator, coordinates) => {
+                        return accumulator || placedSquareCoordinates.indexOf(coordinates) !== -1;
+                    }, false),
+                    isValidWord: this.dictionary.has(word.toLowerCase())
+                };
+            }).filter((wordObject) => wordObject.word.length > 1 && wordObject.containsPlacedTile);
+
+            placedWords = [...placedWords, ...squareRowWords];
+        });
+
+        console.log('placedWords: ');
+        console.log(placedWords);
+
         this.state.placedTileIds.forEach((tileId) => {
             this.state.playedTileIds.push(tileId);
         });
 
         this.state.placedTileIds = [];
-        console.log('playedTileIds: ');
-        console.log(this.state.playedTileIds);
     }
 
     render() {
@@ -698,11 +838,14 @@ class Scrabble extends React.Component {
                 <p>Loading...</p>
             );
         } else if (this.state.gameState === 'ready') {
+            const currentGamePhase = this.gamePhases[this.state.currentGamePhaseIndex].name;
+            const message = this.gamePhases[this.state.currentGamePhaseIndex].message;
+            console.log(currentGamePhase);
+
             // Refract these into functions
             const currentPlayer = this.players.get(this.state.currentPlayerId);
             const currentPlayerTiles = [];
 
-            console.log(currentPlayer);
             currentPlayer.tileIds.forEach((tileId) => {
                 currentPlayerTiles.push(this.tiles.get(tileId));
             });
@@ -724,11 +867,10 @@ class Scrabble extends React.Component {
             });
 
             const playableSquareCoordinates = []; // For GameBoard
-            if (this.state.currentGamePhase === 'place') {
+            if (currentGamePhase === 'place') {
+                console.log('finding available squares');
                 if (this.state.placedTileIds.length === 0) {
-                    console.log('no square is placed yet');
                     if (this.state.playedTileIds.length === 0) {
-                        console.log('no square is played yet');
                         playableSquareCoordinates.push('H|8');
                     } else {
                         this.state.playedTileIds.forEach((tileId) => {
@@ -758,8 +900,6 @@ class Scrabble extends React.Component {
                     const firstPlacedSquareCoordinates = placedSquareCoordinates[0];
                     const firstPlacedSquare = this.state.squares.get(firstPlacedSquareCoordinates);
                     const squareCoordinates = new Set([...playedSquareCoordinates, ...placedSquareCoordinates]);
-                    console.log('squareCoordinates: ');
-                    console.log(squareCoordinates);
 
                     let placingDirection = 'both';
 
@@ -777,19 +917,17 @@ class Scrabble extends React.Component {
 
                     // Vertical
                     if (placingDirection === 'vertical' || placingDirection === 'both') {
-                        const columnCoordinates = GridHelpers.getColumnCoordinates(firstPlacedSquareCoordinates);
+                        const columnCoordinates = GridHelpers.getColumnFromCoordinates(firstPlacedSquareCoordinates);
                         let squareColumnString = '';
 
                         columnCoordinates.forEach((coordinates) => {
                             if (squareCoordinates.has(coordinates)) {
-                                squareColumnString += coordinates + '/';
+                                squareColumnString += coordinates + '+';
                             } else {
                                 squareColumnString += ' ';
                             }
                         });
-                        const squareColumnGroups = squareColumnString.replace(/\s+/g, " ").trim().split(' ').map((s) => s.substring(0, s.length - 1).split('/'));
-                        console.log('squareColumnGroups: ');
-                        console.log(squareColumnGroups);
+                        const squareColumnGroups = squareColumnString.replace(/\s+/g, ' ').trim().split(' ').map((s) => s.substring(0, s.length - 1).split('+'));
                         const firstPlacedSquareColumnGroup = squareColumnGroups.find((g) => g.indexOf(firstPlacedSquareCoordinates) !== -1);
                         firstPlacedSquareColumnGroup.forEach((coordinates) => {
                             const verticalAdjacentCoordinates = GridHelpers.getVerticalAdjacentCoordinates(coordinates);
@@ -812,14 +950,12 @@ class Scrabble extends React.Component {
 
                         rowCoordinates.forEach((coordinates) => {
                             if (squareCoordinates.has(coordinates)) {
-                                squareRowString += coordinates + '/';
+                                squareRowString += coordinates + '+';
                             } else {
                                 squareRowString += ' ';
                             }
                         });
-                        const squareRowGroups = squareRowString.replace(/\s+/g, " ").trim().split(' ').map((s) => s.substring(0, s.length - 1).split('/'));
-                        console.log('squareRowGroups: ');
-                        console.log(squareRowGroups);
+                        const squareRowGroups = squareRowString.replace(/\s+/g, " ").trim().split(' ').map((s) => s.substring(0, s.length - 1).split('+'));
                         const firstPlacedSquareRowGroup = squareRowGroups.find((g) => g.indexOf(firstPlacedSquareCoordinates) !== -1);
                         firstPlacedSquareRowGroup.forEach((coordinates) => {
                             const horizontalAdjacentCoordinates = GridHelpers.getHorizontalAdjacentCoordinates(coordinates);
@@ -838,18 +974,12 @@ class Scrabble extends React.Component {
                 }
             }
 
-
-            console.log(`placed: `);
-            console.log(placedSquareCoordinates);
-            console.log(`playable: `);
-            console.log(playableSquareCoordinates);
-            console.log(`played: `);
             console.log(playedSquareCoordinates);
 
             return (
                 <div id="scrabble" >
                     <div id="scrabble__game" className="page">
-                        <GameBoard currentGamePhase={this.state.currentGamePhase}
+                        <GameBoard currentGamePhase={currentGamePhase}
                             squares={this.state.squares}
                             squareOrder={this.squareOrder}
                             placedLetters={placedLetters}
@@ -886,14 +1016,14 @@ class Scrabble extends React.Component {
                                     });
                                 }
                             }} />
-                        <GameStatsDisplay currentGamePhase={this.state.currentGamePhase}
+                        <GameStatsDisplay currentGamePhase={currentGamePhase}
                             selectedTileId={this.state.selectedTileId}
+                            message={message}
                             currentPlayer={currentPlayer}
                             turn={this.state.turn} />
-                        <InputButtonsDisplay currentGamePhase={this.state.currentGamePhase}
+                        <InputButtonsDisplay currentGamePhase={currentGamePhase}
                             inputButtonsCallback={(choice) => {
-                                // Draw -> Play/exchange -> Place(skip if exchange) -> End
-                                // Play/exchange phase
+                                // Play/exchange -> Place(skip if exchange) -> Draw -> End
                                 if (choice === 'play') {
                                     this.nextGamePhase();
                                 } else if (choice === 'exchange') {
@@ -911,7 +1041,7 @@ class Scrabble extends React.Component {
                                     this.nextGamePhase();
                                 }
                             }} />
-                        <CurrentPlayerTilesDisplay currentGamePhase={this.state.currentGamePhase}
+                        <CurrentPlayerTilesDisplay currentGamePhase={currentGamePhase}
                             selectedTileId={this.state.selectedTileId}
                             placedTileIds={new Set(this.state.placedTileIds)}
                             currentPlayerTiles={currentPlayerTiles}
@@ -919,7 +1049,7 @@ class Scrabble extends React.Component {
                                 this.setState({ selectedTileId: selectedTileId });
                             }} />
                     </div>
-                    <ScoreBoard currentGamePhase={this.state.currentGamePhase}
+                    <ScoreBoard currentGamePhase={currentGamePhase}
                         players={this.players}
                         playerOrder={this.playerOrder} />
                 </div>

@@ -3,7 +3,7 @@
   --square-color: gray;
   --double-letter-color: lightblue;
   --triple-letter-color: blue;
-  --double-word-color: salmon;
+  --double-word-color: pink;
   --triple-word-color: red;
   --selected-tile-color: yellow;
 
@@ -18,6 +18,9 @@
   padding: 0;
   box-sizing: border-box;
 }
+body {
+  font-family: sans-serif;
+}
 #scrabble {
   height: 100vh;
   overflow-x: hidden;
@@ -25,7 +28,6 @@
   scroll-snap-type: mandatory;
   scroll-snap-points-y: repeat(100vh);
   scroll-snap-type: y mandatory;
-  font-family: sans-serif;
 }
 
 .page {
@@ -94,6 +96,10 @@
 
 /* Player Input */
 #playerInput__stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   grid-column: 2/3;
   grid-row: 1/2;
   background-color: lightgreen;
