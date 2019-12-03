@@ -7,34 +7,36 @@ const SETTINGS = {
 };
 
 const TILE_DATA = {
-    'B': { point: 3, count: 2 },
-    'A': { point: 1, count: 9 },
-    'C': { point: 3, count: 2 },
-    'D': { point: 2, count: 4 },
-    'E': { point: 1, count: 12 },
-    'F': { point: 4, count: 2 },
-    'G': { point: 2, count: 3 },
-    'H': { point: 4, count: 2 },
-    'I': { point: 1, count: 9 },
-    'J': { point: 8, count: 1 },
-    'K': { point: 5, count: 1 },
-    'L': { point: 1, count: 4 },
-    'M': { point: 3, count: 2 },
-    'N': { point: 1, count: 6 },
-    'O': { point: 1, count: 8 },
-    'P': { point: 3, count: 2 },
-    'Q': { point: 10, count: 1 },
-    'R': { point: 1, count: 6 },
-    'S': { point: 1, count: 4 },
-    'T': { point: 1, count: 6 },
-    'U': { point: 1, count: 4 },
-    'V': { point: 4, count: 2 },
-    'W': { point: 4, count: 2 },
-    'X': { point: 8, count: 1 },
-    'Y': { point: 4, count: 2 },
-    'Z': { point: 10, count: 1 },
-    '_BLANK': { point: 0, count: 2 }
+    'B': { points: 3, count: 2 },
+    'A': { points: 1, count: 9 },
+    'C': { points: 3, count: 2 },
+    'D': { points: 2, count: 4 },
+    'E': { points: 1, count: 12 },
+    'F': { points: 4, count: 2 },
+    'G': { points: 2, count: 3 },
+    'H': { points: 4, count: 2 },
+    'I': { points: 1, count: 9 },
+    'J': { points: 8, count: 1 },
+    'K': { points: 5, count: 1 },
+    'L': { points: 1, count: 4 },
+    'M': { points: 3, count: 2 },
+    'N': { points: 1, count: 6 },
+    'O': { points: 1, count: 8 },
+    'P': { points: 3, count: 2 },
+    'Q': { points: 10, count: 1 },
+    'R': { points: 1, count: 6 },
+    'S': { points: 1, count: 4 },
+    'T': { points: 1, count: 6 },
+    'U': { points: 1, count: 4 },
+    'V': { points: 4, count: 2 },
+    'W': { points: 4, count: 2 },
+    'X': { points: 8, count: 1 },
+    'Y': { points: 4, count: 2 },
+    'Z': { points: 10, count: 1 }
 };
+
+// '_BLANK': {
+//     points: 0, count: 2 }
 
 const PREMIUM_SQUARE_DATA = {
     // Double Letter
@@ -225,11 +227,11 @@ class SetupHelpers {
         const tileOrder = [];
 
         for (let letter in TILE_DATA) {
-            const point = TILE_DATA[letter].point;
+            const points = TILE_DATA[letter].points;
             const count = TILE_DATA[letter].count;
 
             for (let i = 0; i < count; i++) {
-                const newTile = new Tile({ letter: letter, point: point });
+                const newTile = new Tile({ letter: letter, points: points });
                 tiles.set(newTile.tileId, newTile);
                 tileOrder.push(newTile.tileId);
             }
@@ -271,14 +273,19 @@ class Square {
 }
 
 class Tile {
-    constructor({ letter = '', point = 0 } = {}) {
+    constructor({ letter = '', points = 0 } = {}) {
         this.coordinates = undefined; // Square that this tile is placed on        
         this.tileId = UtilHelpers.generateUUID();
         this.letter = letter;
-        this.point = point;
+        this.points = points;
     }
 }
-
+class Word {
+    constructor({ word, points } = {}) {
+        this.word = word;
+        this.points = points;
+    }
+}
 class GamePhase {
     constructor({ name, message } = {}) {
         this.name = name;
@@ -290,8 +297,13 @@ class Player {
     constructor({ name = 'Player' } = {}) {
         this.playerId = UtilHelpers.generateUUID();
         this.name = name;
-        this.score = 0;
         this.tileIds = new Set(); // Tiles that this player currently holds
+        this.playedWords = [];
+    }
+    get points() {
+        return this.playedWords.reduce((accumulator, word) => {
+            return accumulator + word.points;
+        }, 0);
     }
 }
 
@@ -376,11 +388,20 @@ class PlayerDisplay extends React.Component {
     }
 
     render() {
+        const playedWords = this.props.player.playedWords.map((word) => {
+            return (
+                <li>{word.word}({word.points} points)</li>
+            );
+        });
+
         return (
             <div className="scoreboard__player">
                 <p>Name: {this.props.player.name}</p>
-                <p>Score: {this.props.player.score}</p>
+                <p>Points: {this.props.player.points}</p>
                 <h2>Played Words:</h2>
+                <ul>
+                    {playedWords}
+                </ul>
             </div>
         );
     }
@@ -392,15 +413,13 @@ class ScoreBoard extends React.Component {
     }
 
     render() {
-        const playerDisplays = [];
-
-        for (let playerId of this.props.playerOrder) {
+        const playerDisplays = this.props.playerOrder.map((playerId) => {
             const player = this.props.players.get(playerId);
 
-            playerDisplays.push(
+            return (
                 <PlayerDisplay key={player.playerId} player={player} />
             );
-        }
+        });
 
         return (
             <div id="page__scoreboard" className="page">
@@ -420,7 +439,8 @@ class GameStatsDisplay extends React.Component {
                 <p>Current Player: {this.props.currentPlayer.name}</p>
                 <p>Current Phase: {this.props.currentGamePhase}</p>
                 <p>Turn: {this.props.turn}</p>
-                <p>{this.props.message}</p>
+                <h4>{this.props.message}</h4>
+                <p>{this.props.customMessage !== undefined ? this.props.customMessage : ''}</p>
             </div>
         );
     }
@@ -441,7 +461,7 @@ class TileDisplay extends React.Component {
                     console.log('current game phase is not place');
                 }}>
                 <h2>{this.props.letter}</h2>
-                <p>{this.props.point}</p>
+                <p>{this.props.points}</p>
             </div >
         );
     }
@@ -460,7 +480,7 @@ class CurrentPlayerTilesDisplay extends React.Component {
                     key={tile.tileId}
                     tileId={tile.tileId}
                     letter={tile.letter}
-                    point={tile.point}
+                    points={tile.points}
                     selected={this.props.selectedTileId === tile.tileId}
                     TileDisplayCallback={(tileId) => {
                         this.props.currentPlayerTilesDisplayCallback(tileId);
@@ -539,6 +559,7 @@ class Scrabble extends React.Component {
         this.state = {
             gameState: 'loading',
             currentGamePhaseIndex: 0,
+            customMessage: '',
             squares: new Map(),
             playedTileIds: [],
             placedTileIds: [],
@@ -614,14 +635,14 @@ class Scrabble extends React.Component {
         this.drawTile(player);
     }
 
-    nextGamePhase(skipNextPhase = false, customMessage) {
-        let currentGamePhaseIndex = this.state.currentGamePhaseIndex + 1;
+    nextGamePhase({ skipNextPhase = false, customMessage } = {}) {
+        this.state.currentGamePhaseIndex++;
         if (!skipNextPhase) {
             const updatedStateProperties = {};
 
-            if (currentGamePhaseIndex === this.gamePhases.length) {
+            if (this.state.currentGamePhaseIndex === this.gamePhases.length) {
                 console.log('going to next player.')
-                currentGamePhaseIndex = 0;
+                this.state.currentGamePhaseIndex = 0;
                 this.currentPlayerIndex++;
 
                 if (this.currentPlayerIndex === this.playerOrder.length) {
@@ -632,21 +653,26 @@ class Scrabble extends React.Component {
                 updatedStateProperties.turn = this.state.turn + 1;
             }
 
-            updatedStateProperties.currentGamePhaseIndex = currentGamePhaseIndex;
-
             updatedStateProperties.selectedTileId = undefined;
+
+            if (customMessage === undefined) {
+                updatedStateProperties.customMessage = '';
+            } else {
+                updatedStateProperties.customMessage = customMessage;
+            }
 
             this.setState(updatedStateProperties, () => {
                 console.log(`current game phase is ${this.gamePhases[this.state.currentGamePhaseIndex].name}`);
             });
         } else {
+            console.log('skipping phase');
             this.nextGamePhase();
         }
     }
 
     cancelPlaceGamePhase(customMessage) {
-        if (this.gamePhases[this.state.currentGamePhaseIndex] === 'place') {
-            this.currentGamePhaseIndex--;
+        if (this.gamePhases[this.state.currentGamePhaseIndex].name === 'place') {
+
             const updatedStateProperties = {};
 
             const currentPlayer = this.players.get(this.state.currentPlayerId);
@@ -656,9 +682,16 @@ class Scrabble extends React.Component {
                 currentPlayer.tileIds.add(tileId);
             });
 
-            updatedStateProperties.currentGamePhase = this.gamePhases[this.currentGamePhaseIndex].name;
+            this.state.currentGamePhaseIndex--;
             updatedStateProperties.placedTileIds = [];
             updatedStateProperties.selectedTileId = undefined;
+
+            if (customMessage !== undefined) {
+                updatedStateProperties.customMessage = customMessage;
+                console.log('setting customMessage');
+            } else {
+                updatedStateProperties.customMessage = '';
+            }
 
             this.setState(updatedStateProperties, () => {
                 console.log('place cancelled');
@@ -725,11 +758,11 @@ class Scrabble extends React.Component {
                     switch (square.squareType) {
                         case 'dl':
                             console.log(`double letter points at ${coordinates}`);
-                            points += boardTiles.get(coordinates).point * 2;
+                            points += boardTiles.get(coordinates).points * 2;
                             break;
                         case 'tl':
                             console.log(`triple letter points at ${coordinates}`);
-                            points += boardTiles.get(coordinates).point * 3;
+                            points += boardTiles.get(coordinates).points * 3;
                             break;
                         case 'dw':
                             wordMultiplier *= 2;
@@ -738,7 +771,7 @@ class Scrabble extends React.Component {
                             wordMultiplier *= 3;
                             break;
                         default:
-                            points += boardTiles.get(coordinates).point;
+                            points += boardTiles.get(coordinates).points;
                     }
 
                     word += boardTiles.get(coordinates).letter;
@@ -750,7 +783,7 @@ class Scrabble extends React.Component {
                     containsPlacedTile: letterCoordinates.reduce((accumulator, coordinates) => {
                         return accumulator || placedSquareCoordinates.indexOf(coordinates) !== -1;
                     }, false),
-                    isValidWord: this.dictionary.has(word.toLowerCase())
+                    isValid: this.dictionary.has(word.toLowerCase())
                 };
             }).filter((wordObject) => wordObject.word.length > 1 && wordObject.containsPlacedTile);
 
@@ -785,20 +818,22 @@ class Scrabble extends React.Component {
                     switch (square.squareType) {
                         case 'dl':
                             console.log(`double letter points at ${coordinates}`);
-                            points += boardTiles.get(coordinates).point * 2;
+                            points += boardTiles.get(coordinates).points * 2;
                             break;
                         case 'tl':
                             console.log(`triple letter points at ${coordinates}`);
-                            points += boardTiles.get(coordinates).point * 3;
+                            points += boardTiles.get(coordinates).points * 3;
                             break;
                         case 'dw':
-                            wordMultiplier *= 2;
+                            if (!playedSquareCoordinates.indexOf(coordinates) === -1)
+                                wordMultiplier *= 2;
                             break;
                         case 'tw':
-                            wordMultiplier *= 3;
+                            if (!playedSquareCoordinates.indexOf(coordinates) === -1)
+                                wordMultiplier *= 3;
                             break;
                         default:
-                            points += boardTiles.get(coordinates).point;
+                            points += boardTiles.get(coordinates).points;
                     }
 
                     word += boardTiles.get(coordinates).letter;
@@ -810,21 +845,45 @@ class Scrabble extends React.Component {
                     containsPlacedTile: letterCoordinates.reduce((accumulator, coordinates) => {
                         return accumulator || placedSquareCoordinates.indexOf(coordinates) !== -1;
                     }, false),
-                    isValidWord: this.dictionary.has(word.toLowerCase())
+                    isValid: this.dictionary.has(word.toLowerCase())
                 };
             }).filter((wordObject) => wordObject.word.length > 1 && wordObject.containsPlacedTile);
 
             placedWords = [...placedWords, ...squareRowWords];
         });
 
+        const invalidWordObjects = [];
+        const validWordObjects = [];
+
+        placedWords.forEach((wordObject) => {
+            if (!wordObject.isValid) {
+                invalidWordObjects.push(wordObject);
+            } else {
+                validWordObjects.push(wordObject);
+            }
+        });
+
         console.log('placedWords: ');
         console.log(placedWords);
 
-        this.state.placedTileIds.forEach((tileId) => {
-            this.state.playedTileIds.push(tileId);
-        });
+        if (invalidWordObjects.length > 0) {
+            console.log('one or more words is not valid.');
+            const invalidWordString = invalidWordObjects.map((wordObject) => wordObject.word).join(',');
+            this.cancelPlaceGamePhase(`Invalid word(s): ${invalidWordString}`);
+        } else {
+            console.log('all words are valid. adding points to player.');
+            this.state.placedTileIds.forEach((tileId) => {
+                this.state.playedTileIds.push(tileId);
+            });
 
-        this.state.placedTileIds = [];
+            // Add played word to players
+            const currentPlayer = this.players.get(this.state.currentPlayerId);
+            currentPlayer.playedWords = [...currentPlayer.playedWords, ...validWordObjects.map((wordObject) => new Word({ word: wordObject.word, points: wordObject.points }))];
+            this.state.placedTileIds = [];
+
+            const validWordString = validWordObjects.map((wordObject) => `${wordObject.word}(${wordObject.points} points)}`).join(',');
+            this.nextGamePhase({ customMessage: `Valid word(s): ${validWordString}` });
+        }
     }
 
     render() {
@@ -833,7 +892,7 @@ class Scrabble extends React.Component {
                 <p>Error</p>
             );
         }
-        if (this.state.gameState === 'loading') {
+        else if (this.state.gameState === 'loading') {
             return (
                 <p>Loading...</p>
             );
@@ -1019,6 +1078,7 @@ class Scrabble extends React.Component {
                         <GameStatsDisplay currentGamePhase={currentGamePhase}
                             selectedTileId={this.state.selectedTileId}
                             message={message}
+                            customMessage={this.state.customMessage}
                             currentPlayer={currentPlayer}
                             turn={this.state.turn} />
                         <InputButtonsDisplay currentGamePhase={currentGamePhase}
@@ -1031,7 +1091,6 @@ class Scrabble extends React.Component {
                                     this.nextGamePhase({ skipNextPhase: true });
                                 } else if (choice === 'place') {
                                     this.playPlacedTiles();
-                                    this.nextGamePhase();
                                 } else if (choice === 'cancel') {
                                     this.cancelPlaceGamePhase();
                                 } else if (choice === 'draw') {

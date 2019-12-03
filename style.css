@@ -147,3 +147,6 @@ body {
 .scoreboard__player {
   border: 5px solid green;
 }
+.scoreboard__player ul {
+  list-style: none;
+}
